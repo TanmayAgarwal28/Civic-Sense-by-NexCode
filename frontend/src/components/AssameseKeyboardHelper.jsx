@@ -23,17 +23,17 @@ export function AssameseKeyboardHelper({ onInsertChar, onInsertPhrase }) {
       <div className="flex items-center justify-between mb-2 pb-2 border-b border-slate-700/60">
         <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400">
           <Keyboard className="w-3.5 h-3.5 text-emerald-400" />
-          <span>অসমীয়া বৰ্ণ আৰু শব্দ সহায়ক (Assamese Virtual Character Palette)</span>
+          <span>{lang === 'as' ? 'অসমীয়া বৰ্ণ আৰু শব্দ সহায়ক' : 'Assamese Virtual Character Palette'}</span>
         </div>
         <span className="text-[10px] text-slate-400">
-          Click any character or phrase to insert at cursor
+          {lang === 'as' ? 'যিকোনো আখৰ বা বাক্যাংশত ক্লিক কৰক' : 'Click any character or phrase to insert at cursor'}
         </span>
       </div>
 
       {/* Quick Campus Phrases */}
       <div className="mb-2.5">
         <div className="text-[10px] font-semibold text-slate-400 mb-1">
-          চৌহদৰ নিয়মীয়া শব্দমালা (Quick Campus Phrases):
+          {lang === 'as' ? 'চৌহদৰ নিয়মীয়া শব্দমালা:' : 'Quick Campus Phrases:'}
         </div>
         <div className="flex flex-wrap gap-1.5">
           {campusPhrases.map((item, idx) => (
@@ -52,7 +52,7 @@ export function AssameseKeyboardHelper({ onInsertChar, onInsertPhrase }) {
       {/* Special Assamese Distinctive Characters */}
       <div className="mb-2">
         <div className="text-[10px] font-semibold text-slate-400 mb-1 flex items-center space-x-1">
-          <span>অসমীয়া বিশেষ বৰ্ণ (Distinctive Assamese Ra, Wa, Ksa, Gya):</span>
+          <span>{lang === 'as' ? 'অসমীয়া বিশেষ বৰ্ণমালা (ৰ, ৱ, ক্ষ, জ্ঞ):' : 'Distinctive Assamese Characters (Ra, Wa, Ksa, Gya):'}</span>
         </div>
         <div className="flex flex-wrap gap-1">
           {['ৰ', 'ৱ', 'ক্ষ', 'জ্ঞ', 'ষ্ট', 'ম্প', 'ন্ধ', 'ণ্ড', 'ক্ত', 'ষ্ঠ', 'স্থ'].map((char, idx) => (
@@ -72,7 +72,7 @@ export function AssameseKeyboardHelper({ onInsertChar, onInsertPhrase }) {
       {/* Compact Vowels & Consonants Toggle */}
       <details className="text-[11px] text-slate-400">
         <summary className="cursor-pointer hover:text-emerald-400 font-medium">
-          বাওঁফালৰ পৰা সকলো স্বৰবৰ্ণ আৰু ব্যঞ্জনবৰ্ণ খোলক (Full Alphabet Palette)...
+          {lang === 'as' ? 'সকলো স্বৰবৰ্ণ আৰু ব্যঞ্জনবৰ্ণ খোলক...' : 'Expand Full Alphabet Palette...'}
         </summary>
         <div className="mt-2 pt-2 border-t border-slate-700/50 flex flex-wrap gap-1">
           {vowels.concat(consonants).map((char, idx) => (

@@ -140,7 +140,7 @@ export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-slate-400 font-medium flex items-center">
               <Filter className="w-3.5 h-3.5 mr-1" />
-              Filter:
+              {lang === 'as' ? 'ফিল্টাৰ:' : 'Filter:'}
             </span>
 
             {/* Category Filter */}
@@ -149,15 +149,15 @@ export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh
               onChange={(e) => setCategoryFilter(e.target.value)}
               className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium"
             >
-              <option value="all">All Categories (সকলো শ্ৰেণী)</option>
-              <option value="water">Water Supply (পানী যোগান)</option>
-              <option value="electricity">Electricity (বিদ্যুৎ আৰু পোহৰ)</option>
-              <option value="infrastructure">Infrastructure & Roads (পথ আৰু গাঁথনি)</option>
-              <option value="it_network">IT & Wi-Fi (তথ্য প্ৰযুক্তি)</option>
-              <option value="sanitation">Sanitation (পৰিচ্ছন্নতা)</option>
-              <option value="hostel">Hostels (ছাত্ৰাবাস)</option>
-              <option value="security">Security & Safety (নিৰাপত্তা)</option>
-              <option value="cafeteria">Cafeteria (কেণ্টিন)</option>
+              <option value="all">{lang === 'as' ? 'সকলো শ্ৰেণী' : 'All Categories'}</option>
+              <option value="water">{lang === 'as' ? 'পানী যোগান' : 'Water Supply'}</option>
+              <option value="electricity">{lang === 'as' ? 'বিদ্যুৎ আৰু পোহৰ' : 'Electricity'}</option>
+              <option value="infrastructure">{lang === 'as' ? 'পথ আৰু আন্তঃগাঁথনি' : 'Infrastructure & Roads'}</option>
+              <option value="it_network">{lang === 'as' ? 'তথ্য প্ৰযুক্তি আৰু ৱাই-ফাই' : 'IT & Wi-Fi'}</option>
+              <option value="sanitation">{lang === 'as' ? 'পৰিচ্ছন্নতা' : 'Sanitation'}</option>
+              <option value="hostel">{lang === 'as' ? 'ছাত্ৰাবাস' : 'Hostels'}</option>
+              <option value="security">{lang === 'as' ? 'নিৰাপত্তা আৰু সুৰক্ষা' : 'Security & Safety'}</option>
+              <option value="cafeteria">{lang === 'as' ? 'কেণ্টিন' : 'Cafeteria'}</option>
             </select>
 
             {/* Language Filter */}
@@ -166,9 +166,9 @@ export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh
               onChange={(e) => setLanguageFilter(e.target.value)}
               className="px-2.5 py-1.5 rounded-lg border border-slate-300 bg-white text-xs font-medium"
             >
-              <option value="all">All Languages / সকলো ভাষা</option>
-              <option value="as">অসমীয়া (Assamese Only)</option>
-              <option value="en">English Only</option>
+              <option value="all">{lang === 'as' ? 'সকলো পঞ্জীয়ন ভাষা' : 'All Origin Languages'}</option>
+              <option value="as">{lang === 'as' ? 'কেৱল অসমীয়া' : 'Assamese Origin'}</option>
+              <option value="en">{lang === 'as' ? 'কেৱল ইংৰাজী' : 'English Origin'}</option>
             </select>
           </div>
 
@@ -176,7 +176,7 @@ export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh
           <div className="flex items-center space-x-2">
             <span className="text-slate-400 font-medium flex items-center">
               <SlidersHorizontal className="w-3.5 h-3.5 mr-1" />
-              Sort:
+              {lang === 'as' ? 'ক্ৰম সজোৱা:' : 'Sort:'}
             </span>
             <select
               value={sortBy}
@@ -201,13 +201,15 @@ export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh
             {t('noIssuesFound')}
           </h4>
           <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
-            Try adjusting your search keywords, clearing active filters, or filing a new grievance.
+            {lang === 'as'
+              ? 'আপোনাৰ সন্ধান শব্দ পৰিৱৰ্তন কৰক বা নতুন অভিযোগ দাখিল কৰক।'
+              : 'Try adjusting your search keywords, clearing active filters, or filing a new grievance.'}
           </p>
           <button
             onClick={() => { setSearchTerm(''); setStatusFilter('all'); setPriorityFilter('all'); setCategoryFilter('all'); }}
             className="mt-4 px-4 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700"
           >
-            Clear All Filters
+            {lang === 'as' ? 'সকলো ফিল্টাৰ পৰিষ্কাৰ কৰক' : 'Clear All Filters'}
           </button>
         </div>
       ) : (

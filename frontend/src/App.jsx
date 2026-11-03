@@ -209,7 +209,7 @@ export default function App() {
                         </span>
                       </div>
                       <h4 className="text-xs font-bold text-slate-900 line-clamp-1 font-assamese">
-                        {iss.title}
+                        {lang === 'as' ? (iss.titleAs || iss.title) : (iss.titleEn || iss.title)}
                       </h4>
                       {iss.address && (
                         <p className="text-[11px] text-amber-700 font-medium mt-1 truncate">
@@ -299,17 +299,17 @@ export default function App() {
                 <span className="text-2xl">🏛️</span>
                 <div>
                   <h4 className="font-extrabold text-white text-sm">
-                    {lang === 'as' ? 'নাগৰিক দৃষ্টি (CivicSense)' : 'CivicSense Campus Redressal'}
+                    {lang === 'as' ? 'নাগৰিক দৃষ্টি' : 'CivicSense Campus Redressal'}
                   </h4>
                   <p className="text-[11px] text-emerald-400 font-medium">
-                    Assam State University
+                    {lang === 'as' ? 'অসম ৰাজ্যিক বিশ্ববিদ্যালয়' : 'Assam State University'}
                   </p>
                 </div>
               </div>
-              <p className="text-slate-400 text-xs leading-relaxed">
+              <p className="text-slate-400 text-xs leading-relaxed font-assamese">
                 {lang === 'as'
-                  ? 'চৌহদৰ আন্তঃগাঁথনি, নিৰাপত্তা আৰু সা-সুবিধা সংক্ৰান্তীয় সমস্যাৰ ক্ষিপ্ৰ সমাধানৰ বাবে এক দ্বিভাষিক এআই স্মাৰ্ট পৰ্টেল।'
-                  : 'An AI-enabled bilingual grievance and campus issue management platform ensuring campus safety, swift resolution, and accountability.'}
+                  ? 'চৌহদৰ আন্তঃগাঁথনি, নিৰাপত্তা আৰু সা-সুবিধা সংক্ৰান্তীয় সমস্যাৰ ক্ষিপ্ৰ সমাধানৰ বাবে এক এআই স্মাৰ্ট পৰ্টেল।'
+                  : 'An AI-enabled grievance and campus issue management platform ensuring campus safety, swift resolution, and accountability.'}
               </p>
             </div>
 
@@ -317,25 +317,25 @@ export default function App() {
             <div>
               <h5 className="font-bold text-white text-xs uppercase tracking-wider mb-3 flex items-center space-x-1.5">
                 <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{lang === 'as' ? 'যোগাযোগৰ তথ্য (Reach Us)' : 'Reach Us / Contact Helpdesk'}</span>
+                <span>{lang === 'as' ? 'যোগাযোগৰ তথ্য' : 'Reach Us / Contact Helpdesk'}</span>
               </h5>
               <ul className="space-y-2.5 text-xs text-slate-400">
                 <li className="flex items-center space-x-2">
                   <Mail className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                   <span>
-                    Email: <a href="mailto:support@example.invalid" className="text-emerald-400 hover:underline">support@example.invalid</a>
+                    {lang === 'as' ? 'ইমেইল:' : 'Email:'} <a href="mailto:support@example.invalid" className="text-emerald-400 hover:underline">support@example.invalid</a>
                   </span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <Phone className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
                   <span>
-                    Helpline: <a href="tel:0000000000" className="text-white font-medium hover:underline">0000000000</a>
+                    {lang === 'as' ? 'হেল্পলাইন:' : 'Helpline:'} <a href="tel:0000000000" className="text-white font-medium hover:underline">0000000000</a>
                   </span>
                 </li>
                 <li className="flex items-center space-x-2">
                   <Phone className="w-3.5 h-3.5 text-rose-400 flex-shrink-0" />
                   <span className="text-rose-300 font-semibold">
-                    Emergency Hotline: <a href="tel:112" className="text-rose-400 hover:underline">112 / +91 94350-12345 (24x7)</a>
+                    {lang === 'as' ? 'জৰুৰীকালীন হটলাইন:' : 'Emergency Hotline:'} <a href="tel:112" className="text-rose-400 hover:underline">112 / +91 94350-12345 (24x7)</a>
                   </span>
                 </li>
               </ul>
@@ -347,14 +347,18 @@ export default function App() {
                 <MapPin className="w-3.5 h-3.5 text-emerald-400" />
                 <span>{lang === 'as' ? 'কাৰ্যালয় আৰু সময়সূচী' : 'Office & Working Hours'}</span>
               </h5>
-              <div className="space-y-2.5 text-xs text-slate-400">
+              <div className="space-y-2.5 text-xs text-slate-400 font-assamese">
                 <div className="flex items-start space-x-2">
                   <MapPin className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0 mt-0.5" />
-                  <span>Central Grievance Redressal Cell, Ground Floor, Administrative Complex, Main Campus</span>
+                  <span>
+                    {lang === 'as' ? 'কেন্দ্ৰীয় অভিযোগ নিবাৰণ কোষ, ভূ-মহলা, প্ৰশাসনিক ভৱন, মুখ্য চৌহদ' : 'Central Grievance Redressal Cell, Ground Floor, Administrative Complex, Main Campus'}
+                  </span>
                 </div>
                 <div className="flex items-center space-x-2">
                   <Clock className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
-                  <span>Mon - Sat: 8:00 AM - 8:00 PM (Emergency SOS: 24x7 Active)</span>
+                  <span>
+                    {lang === 'as' ? 'সোম - শনি: পুৱা ৮:০০ - নিশা ৮:০০ (জৰুৰীকালীন SOS: ২৪x৭ সক্ৰিয়)' : 'Mon - Sat: 8:00 AM - 8:00 PM (Emergency SOS: 24x7 Active)'}
+                  </span>
                 </div>
               </div>
             </div>
@@ -364,15 +368,15 @@ export default function App() {
           {/* Bottom Copyright & Status */}
           <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-3 text-slate-500 text-[11px] text-center sm:text-left">
             <div>
-              © {new Date().getFullYear()} Assam State University. All rights reserved. CivicSense AI Grievance System.
+              {lang === 'as' ? '© ২০২৬ অসম ৰাজ্যিক বিশ্ববিদ্যালয়। সৰ্বস্বত্ব সংৰক্ষিত।' : `© ${new Date().getFullYear()} Assam State University. All rights reserved. CivicSense AI Grievance System.`}
             </div>
             <div className="flex items-center space-x-3 text-slate-400">
               <span className="flex items-center space-x-1">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block animate-ping"></span>
-                <span>Campus Redressal Active</span>
+                <span>{lang === 'as' ? 'চৌহদ সমাধান সেৱা সক্ৰিয়' : 'Campus Redressal Active'}</span>
               </span>
               <span>•</span>
-              <span>Assamese (অসমীয়া) & English</span>
+              <span>{lang === 'as' ? 'অসমীয়া ভাষা' : 'English Interface'}</span>
             </div>
           </div>
         </div>

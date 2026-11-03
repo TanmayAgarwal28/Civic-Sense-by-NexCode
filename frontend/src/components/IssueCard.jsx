@@ -61,7 +61,9 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
               #{issue.ticketId}
             </span>
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border uppercase tracking-wide ${getPriorityBadgeClass()}`}>
-              {issue.priority}
+              {lang === 'as'
+                ? (isCritical ? 'জৰুৰীকালীন' : isHigh ? 'উচ্চ' : issue.priority === 'low' ? 'নিম্ন' : 'মধ্যম')
+                : issue.priority}
             </span>
           </div>
 
@@ -69,26 +71,13 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass()}`}>
               {getStatusText()}
             </span>
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-800 border border-amber-300 uppercase">
-              Bilingual • দ্বিভাষিক
-            </span>
           </div>
         </div>
 
-        {/* Issue Title (Dual Language Support) */}
-        <div className="mb-2">
-          <h4 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug">
-            {lang === 'as' ? bi.titleAs : bi.titleEn}
-          </h4>
-          <div className="flex items-center space-x-1.5 text-xs text-slate-500 font-medium mt-1">
-            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 uppercase shrink-0">
-              {lang === 'as' ? 'EN' : 'অসমীয়া'}
-            </span>
-            <span className="truncate italic">
-              {lang === 'as' ? bi.titleEn : bi.titleAs}
-            </span>
-          </div>
-        </div>
+        {/* Issue Title in Active Language */}
+        <h4 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug mb-2 font-assamese">
+          {lang === 'as' ? bi.titleAs : bi.titleEn}
+        </h4>
 
         {/* Location & Department */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mb-2">
@@ -97,7 +86,7 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
             <span className="truncate max-w-[200px]">{issue.location}</span>
           </span>
           <span className="text-slate-300">•</span>
-          <span className="text-indigo-600 font-medium truncate max-w-[180px]">
+          <span className="text-indigo-600 font-medium truncate max-w-[180px] font-assamese">
             {lang === 'as' ? (issue.department?.as || issue.category) : (issue.department?.en || issue.category)}
           </span>
         </div>
@@ -105,7 +94,7 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
         {/* Specific Address Tag if available */}
         {issue.address && (
           <div className="text-[11px] text-amber-800 bg-amber-50/80 px-2 py-0.5 rounded-md border border-amber-200/80 mb-2.5 truncate font-medium flex items-center">
-            <span className="font-bold mr-1">📍 Address:</span> {issue.address}
+            <span className="font-bold mr-1">📍 {lang === 'as' ? 'ঠিকনা:' : 'Address:'}</span> {issue.address}
           </div>
         )}
 
@@ -114,13 +103,13 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
           <div className="mb-3 relative rounded-xl overflow-hidden h-32 bg-slate-100 border border-slate-200">
             <img src={issue.imageUrl} alt="Damage evidence" className="w-full h-full object-cover" />
             <div className="absolute bottom-1.5 left-1.5 bg-slate-900/80 backdrop-blur-sm text-[10px] font-semibold text-emerald-300 px-2 py-0.5 rounded">
-              📷 Multimodal Vision Tagged
+              📷 {lang === 'as' ? 'এআই ফটো পৰীক্ষিত' : 'AI Vision Tagged'}
             </div>
           </div>
         )}
 
-        {/* Description Snippet (shows according to language) */}
-        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3">
+        {/* Description Snippet (shows in active language) */}
+        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-assamese mb-3">
           {lang === 'as' ? bi.descriptionAs : bi.descriptionEn}
         </p>
 
@@ -128,14 +117,22 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
         {issue.isCompoundHazard && (
           <div className="mb-3 px-2.5 py-1.5 rounded-lg bg-rose-50 border border-rose-200 text-rose-700 text-[11px] font-semibold flex items-center space-x-1.5">
             <ShieldAlert className="w-3.5 h-3.5 text-rose-600 flex-shrink-0" />
-            <span>Compound Risk: Water ingress near live switchboard!</span>
+            <span>
+              {lang === 'as' 
+                ? 'যৌগিক বিপদ: পানী আৰু সক্ৰিয় বিজুলী সংযোগৰ আশংকা!'
+                : 'Compound Risk: Water ingress near live switchboard!'}
+            </span>
           </div>
         )}
 
         {issue.duplicateInfo && (
           <div className="mb-3 px-2.5 py-1 rounded-lg bg-purple-50 border border-purple-200 text-purple-700 text-[11px] font-medium flex items-center space-x-1.5">
             <Link2 className="w-3.5 h-3.5 text-purple-600 flex-shrink-0" />
-            <span>Semantic duplicate linked to #{issue.duplicateInfo.linkedTicketId}</span>
+            <span>
+              {lang === 'as'
+                ? `প্ৰতিলিপি অভিযোগ: টিকট #${issue.duplicateInfo.linkedTicketId} ৰ সৈতে সংযুক্ত`
+                : `Semantic duplicate linked to #${issue.duplicateInfo.linkedTicketId}`}
+            </span>
           </div>
         )}
 
@@ -147,7 +144,7 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
         {/* SLA Window */}
         <div className="flex items-center text-slate-500 text-[11px]">
           <Clock className="w-3.5 h-3.5 mr-1 text-slate-400" />
-          <span>SLA: {issue.slaHours || 24}h target</span>
+          <span>{lang === 'as' ? `সময়সীমা: ${issue.slaHours || 24} ঘণ্টা লক্ষ্য` : `SLA: ${issue.slaHours || 24}h target`}</span>
         </div>
 
         <div className="flex items-center space-x-2">
@@ -158,8 +155,8 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
               e.stopPropagation();
               onUpvote(issue.id);
             }}
-            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 transition-all font-semibold"
-            title="Upvote / Me Too (+1)"
+            className="flex items-center space-x-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 transition-all font-semibold cursor-pointer"
+            title={lang === 'as' ? 'সন্মতি জনাওক (+১)' : 'Upvote (+1)'}
           >
             <ThumbsUp className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
             <span>{issue.upvotes || 0}</span>

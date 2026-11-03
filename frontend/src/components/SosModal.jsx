@@ -14,7 +14,8 @@ export function SosModal({ isOpen, onClose }) {
       titleEn: 'Campus Security Main Gate Control Room',
       titleAs: 'মুখ্য গেট চৌহদ নিৰাপত্তা নিয়ন্ত্ৰণ কক্ষ',
       phone: '+91 94350-12345 / Extn: 100',
-      timing: '24x7 Immediate Patrol Dispatch'
+      timingEn: '24x7 Immediate Patrol Dispatch',
+      timingAs: '২৪x৭ তাৎক্ষণিক টহল দল'
     },
     {
       icon: Zap,
@@ -22,7 +23,8 @@ export function SosModal({ isOpen, onClose }) {
       titleEn: 'Electrical Hazard & Substation Breakdown',
       titleAs: 'বিদ্যুৎ সংকট আৰু ছাবষ্টেচন জৰুৰীকালীন দল',
       phone: '+91 94350-54321 / Extn: 112',
-      timing: 'Instant MCB Cutoff Response'
+      timingEn: 'Instant MCB Cutoff Response',
+      timingAs: 'তাৎক্ষণিক বিদ্যুৎ সংযোগ বিছিন্নকৰণ'
     },
     {
       icon: HeartPulse,
@@ -30,7 +32,8 @@ export function SosModal({ isOpen, onClose }) {
       titleEn: 'University Health Centre & Ambulance',
       titleAs: 'বিশ্ববিদ্যালয় স্বাস্থ্য কেন্দ্ৰ আৰু এম্বুলেন্স',
       phone: '+91 94350-99999 / Extn: 108',
-      timing: 'Emergency Medical Officer on Duty'
+      timingEn: 'Emergency Medical Officer on Duty',
+      timingAs: 'জৰুৰীকালীন কৰ্তব্যৰত চিকিৎসা বিষয়া'
     },
     {
       icon: Flame,
@@ -38,7 +41,8 @@ export function SosModal({ isOpen, onClose }) {
       titleEn: 'Campus Fire Safety & Chemical Spill Cell',
       titleAs: 'অগ্নিনিৰ্বাপক আৰু ৰাসায়নিক দুৰ্ঘটনা শাখা',
       phone: '+91 94350-10101 / Extn: 101',
-      timing: 'Rapid Response Unit'
+      timingEn: 'Rapid Response Unit',
+      timingAs: 'ক্ষিপ্ৰ সহাৰি শাখা'
     }
   ];
 
@@ -86,7 +90,7 @@ export function SosModal({ isOpen, onClose }) {
                       {lang === 'as' ? h.titleAs : h.titleEn}
                     </h4>
                     <span className="text-[10px] text-emerald-400 font-medium">
-                      ● {h.timing}
+                      ● {lang === 'as' ? h.timingAs : h.timingEn}
                     </span>
                   </div>
                 </div>
@@ -96,7 +100,7 @@ export function SosModal({ isOpen, onClose }) {
                   className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white flex items-center space-x-1 shadow-sm whitespace-nowrap"
                 >
                   <PhoneCall className="w-3 h-3" />
-                  <span>Call Now</span>
+                  <span>{lang === 'as' ? 'কল কৰক' : 'Call Now'}</span>
                 </a>
               </div>
             );

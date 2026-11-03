@@ -45,11 +45,11 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 </h1>
                 <span className="hidden lg:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   <Sparkles className="w-3 h-3 mr-1 text-emerald-400" />
-                  Smart Campus
+                  {lang === 'as' ? 'স্মাৰ্ট চৌহদ' : 'Smart Campus'}
                 </span>
               </div>
               <p className="text-xs text-slate-400 hidden sm:block mt-0.5 font-medium">
-                Assam State University • {lang === 'as' ? 'দ্বিভাষিক চৌহদ নিৰাময় পৰ্টেল' : 'Bilingual Issue Redressal'}
+                {lang === 'as' ? 'অসম ৰাজ্যিক বিশ্ববিদ্যালয় • চৌহদ নিৰাময় পৰ্টেল' : 'Assam State University • Campus Redressal'}
               </p>
             </div>
           </div>
@@ -142,18 +142,18 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
             {/* Language Switcher */}
             <button
               onClick={toggleLanguage}
-              title="Switch Language / ভাষা সলনি কৰক"
+              title={lang === 'as' ? 'ভাষা সলনি কৰক' : 'Switch Language'}
               className="flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-emerald-400 border border-slate-700 hover:border-emerald-500/50 transition-all shadow-sm cursor-pointer"
             >
               <Globe className="w-4 h-4 text-emerald-400" />
-              <span>{lang === 'as' ? 'English (EN)' : 'অসমীয়া (AS)'}</span>
+              <span>{lang === 'as' ? 'English' : 'অসমীয়া'}</span>
             </button>
 
             {/* Emergency SOS Hotline */}
             <button
               onClick={onOpenSos}
               className="hidden lg:flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/80 shadow-md shadow-rose-600/20 animate-pulse cursor-pointer"
-              title="Campus Emergency Hotline"
+              title={lang === 'as' ? 'চৌহদ জৰুৰীকালীন হটলাইন' : 'Campus Emergency Hotline'}
             >
               <PhoneCall className="w-3.5 h-3.5" />
               <span>SOS 24x7</span>
@@ -165,7 +165,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 <div 
                   onClick={onOpenAuth}
                   className={`flex items-center space-x-2.5 px-3.5 py-2 rounded-xl text-xs font-semibold border cursor-pointer hover:opacity-90 shadow-sm transition-all ${getRoleBadgeClass()}`}
-                  title="Switch profile or manage account"
+                  title={lang === 'as' ? 'প্ৰ’ফাইল সলনি কৰক' : 'Switch profile or manage account'}
                 >
                   {getRoleIcon()}
                   <div className="hidden sm:block text-left">
@@ -177,7 +177,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 <button
                   onClick={onLogout}
                   className="p-2.5 rounded-xl text-slate-400 hover:text-rose-400 hover:bg-slate-800 border border-transparent hover:border-slate-700 transition-all cursor-pointer"
-                  title="Sign Out"
+                  title={lang === 'as' ? 'প্ৰস্থান কৰক' : 'Sign Out'}
                 >
                   <LogOut className="w-4 h-4" />
                 </button>

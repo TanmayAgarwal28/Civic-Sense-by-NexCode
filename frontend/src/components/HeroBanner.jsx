@@ -22,12 +22,12 @@ export function HeroBanner({ stats = {} }) {
               <span>{lang === 'as' ? 'প্ৰত্যক্ষ চৌহদ তদাৰকী সক্ৰিয়' : 'Live Campus Redressal Engine Active'}</span>
             </div>
             <h2 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              {lang === 'as' ? 'দ্বিভাষিক এআই স্মাৰ্ট চৌহদ সমস্যা সমাধান ব্যৱস্থা' : 'Bilingual AI Smart Campus Issue Management'}
+              {lang === 'as' ? 'এআই স্মাৰ্ট চৌহদ সমস্যা সমাধান ব্যৱস্থা' : 'AI Smart Campus Issue Management'}
             </h2>
             <p className="text-sm text-slate-300 mt-1 max-w-3xl">
               {lang === 'as'
-                ? 'অসমীয়া আৰু ইংৰাজী ভাষাত চৌহদৰ সমস্যা দাখিল, স্বয়ংক্ৰিয় এআই শ্ৰেণীবিভাজন, প্ৰতিলিপি চিনাক্তকৰণ আৰু তৎপৰ ক্ষিপ্ৰ সমাধান।'
-                : 'Report and track university grievances in Assamese or English. AI automatically interprets complaints, flags hazards, detects semantic duplicates, and alerts crews.'}
+                ? 'চৌহদৰ সমস্যা দাখিল, স্বয়ংক্ৰিয় এআই শ্ৰেণীবিভাজন, প্ৰতিলিপি চিনাক্তকৰণ আৰু ক্ষিপ্ৰ সমাধান।'
+                : 'Report and track university grievances. AI automatically interprets complaints, flags hazards, detects semantic duplicates, and alerts crews.'}
             </p>
           </div>
 
@@ -75,7 +75,7 @@ export function HeroBanner({ stats = {} }) {
               <Activity className="w-4 h-4 text-indigo-400" />
             </div>
             <div className="text-xl font-bold text-white">{stats.total ?? 0}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Assam State Univ</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">{lang === 'as' ? 'অসম ৰাজ্যিক বিশ্ববিদ্যালয়' : 'Assam State Univ'}</div>
           </div>
 
           <div className="bg-slate-800/70 border border-slate-700/80 rounded-xl p-3 shadow-sm hover:border-slate-600 transition-colors">
@@ -84,7 +84,7 @@ export function HeroBanner({ stats = {} }) {
               <Wrench className="w-4 h-4 text-amber-400" />
             </div>
             <div className="text-xl font-bold text-amber-400">{stats.inProgress ?? 0}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Crew deployed</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">{lang === 'as' ? 'কৰ্মী মোতায়েন' : 'Crew deployed'}</div>
           </div>
 
           <div className="bg-slate-800/70 border border-slate-700/80 rounded-xl p-3 shadow-sm hover:border-slate-600 transition-colors">
@@ -93,7 +93,7 @@ export function HeroBanner({ stats = {} }) {
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
             </div>
             <div className="text-xl font-bold text-emerald-400">{stats.resolved ?? 0}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Verified & Signed off</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">{lang === 'as' ? 'যাচাই আৰু অনুমোদিত' : 'Verified & Signed off'}</div>
           </div>
 
           <div className="bg-slate-800/70 border border-slate-700/80 rounded-xl p-3 shadow-sm hover:border-slate-600 transition-colors">
@@ -102,7 +102,7 @@ export function HeroBanner({ stats = {} }) {
               <ShieldAlert className="w-4 h-4 text-rose-400 animate-bounce" />
             </div>
             <div className="text-xl font-bold text-rose-400">{stats.critical ?? 0}</div>
-            <div className="text-[10px] text-rose-300/80 mt-0.5">Immediate 2h SLA</div>
+            <div className="text-[10px] text-rose-300/80 mt-0.5">{lang === 'as' ? 'তাত্ক্ষণিক ২ ঘণ্টা SLA' : 'Immediate 2h SLA'}</div>
           </div>
 
           <div className="bg-slate-800/70 border border-slate-700/80 rounded-xl p-3 shadow-sm hover:border-slate-600 transition-colors">
@@ -111,7 +111,7 @@ export function HeroBanner({ stats = {} }) {
               <Clock className="w-4 h-4 text-sky-400" />
             </div>
             <div className="text-xl font-bold text-sky-400">{stats.avgResolutionHours ?? 0}h</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Campus benchmark</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">{lang === 'as' ? 'চৌহদ মানদণ্ড' : 'Campus benchmark'}</div>
           </div>
 
           <div className="bg-slate-800/70 border border-slate-700/80 rounded-xl p-3 shadow-sm hover:border-slate-600 transition-colors">
@@ -120,7 +120,7 @@ export function HeroBanner({ stats = {} }) {
               <Users className="w-4 h-4 text-purple-400" />
             </div>
             <div className="text-xl font-bold text-purple-400">{stats.duplicatesPrevented ?? 0}</div>
-            <div className="text-[10px] text-slate-400 mt-0.5">Via Semantic AI Match</div>
+            <div className="text-[10px] text-slate-400 mt-0.5">{lang === 'as' ? 'চিমেণ্টিক এআই দ্বাৰা' : 'Via Semantic AI Match'}</div>
           </div>
 
         </div>

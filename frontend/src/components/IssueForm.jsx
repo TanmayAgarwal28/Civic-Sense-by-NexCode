@@ -230,7 +230,7 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
           <div>
             <div className="flex items-center space-x-2 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>{lang === 'as' ? 'দ্বিভাষিক এআই অভিযোজক' : 'Bilingual AI Campus Redressal'}</span>
+              <span>{lang === 'as' ? 'এআই অভিযোজক' : 'AI Campus Redressal'}</span>
             </div>
             <h3 className="text-xl font-extrabold text-white">
               {t('formHeading')}
@@ -244,10 +244,10 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
             type="button"
             onClick={handleVoiceSimulation}
             className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all self-start"
-            title="Simulate Voice Input / কণ্ঠস্বৰ দ্বাৰা দাখিল"
+            title={lang === 'as' ? 'কণ্ঠস্বৰ দ্বাৰা দাখিল' : 'Voice Note Simulation'}
           >
             <Mic className="w-4 h-4 text-emerald-300 animate-pulse" />
-            <span>{lang === 'as' ? 'কণ্ঠস্বৰ দ্বাৰা দাখিল (Simulate)' : 'Voice Note Simulation'}</span>
+            <span>{lang === 'as' ? 'কণ্ঠস্বৰ দ্বাৰা দাখিল' : 'Voice Note Simulation'}</span>
           </button>
         </div>
       </div>
@@ -260,7 +260,7 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
             <AlertCircle className="w-5 h-5 flex-shrink-0 text-rose-600" />
             <div>
               <p className="font-bold text-xs uppercase tracking-wide">
-                {lang === 'as' ? 'ছাত্ৰ প্ৰফাইল স্থগিত (Access OFF)' : 'Student Access Suspended (OFF)'}
+                {lang === 'as' ? 'ছাত্ৰ প্ৰফাইল স্থগিত' : 'Student Access Suspended'}
               </p>
               <p className="text-xs text-rose-700 mt-0.5">
                 {lang === 'as' ? 'প্ৰশাসকৰ দ্বাৰা আপোনাৰ অভিযোগ দাখিলৰ সুবিধা সাময়িকভাৱে নিষ্ক্ৰিয় কৰা হৈছে।' : 'Your grievance submission privileges have been turned OFF by the Campus Administrator.'}
@@ -284,10 +284,10 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
             onClick={() => setShowKeyboardHelper(!showKeyboardHelper)}
             className="text-emerald-700 hover:text-emerald-800 font-bold flex items-center space-x-1"
           >
-            <span>{showKeyboardHelper ? '▲ অসমীয়া বৰ্ণ সহায়ক লুকুৱাওক (Hide Palette)' : '▼ অসমীয়া বৰ্ণ আৰু যুক্তাক্ষৰ সহায়ক খোলক (Open Assamese Palette)'}</span>
+            <span>{showKeyboardHelper ? (lang === 'as' ? '▲ অসমীয়া বৰ্ণ সহায়ক লুকুৱাওক' : '▲ Hide Assamese Palette') : (lang === 'as' ? '▼ অসমীয়া বৰ্ণ আৰু যুক্তাক্ষৰ সহায়ক খোলক' : '▼ Open Assamese Character Palette')}</span>
           </button>
           <span className="text-slate-400 text-[11px]">
-            {lang === 'as' ? 'অসমীয়া আৰু ইংৰাজী দুয়োটা গ্ৰহণযোগ্য' : 'Accepts Assamese Unicode & English'}
+            {lang === 'as' ? 'ইউনিকোড অসমীয়া আৰু ইংৰাজী গ্ৰহণযোগ্য' : 'Accepts Assamese Unicode & English'}
           </span>
         </div>
 
@@ -334,7 +334,9 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
         <div>
           <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5 flex items-center space-x-1.5">
             <Home className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Specific Campus Address / সঠিক ঠিকনা ও কোঠা নম্বৰ <span className="text-rose-500">*</span></span>
+            <span>
+              {lang === 'as' ? 'চৌহদৰ সঠিক ঠিকনা আৰু কোঠা নম্বৰ' : 'Specific Campus Address & Room No.'} <span className="text-rose-500">*</span>
+            </span>
           </label>
           <input
             type="text"
@@ -342,77 +344,17 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
             value={address}
             onChange={(e) => setAddress(e.target.value)}
             onFocus={() => setActiveInputFocus('address')}
-            placeholder="e.g. Hostel 4, 3rd Floor, Room 302, East Wing / কলা ভৱন, ২য় মহলা, ৰুম ২০৪"
+            placeholder={lang === 'as' 
+              ? 'যেনে: হোষ্টেল ৪, ৩য় মহলা, ৰুম ৩০২, পূব শাখা / কলা ভৱন, ২য় মহলা'
+              : 'e.g. Hostel 4, 3rd Floor, Room 302, East Wing / Arts Block, 2nd Floor'}
             className="w-full px-4 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 text-xs sm:text-sm font-medium"
           />
           <p className="text-[11px] text-slate-400 mt-1">
-            Provide specific room number, floor, or nearby building pillar so workers can reach the spot instantly.
+            {lang === 'as'
+              ? 'কোঠা নম্বৰ, মহলা বা কাষৰ ভৱন স্পষ্টকৈ উল্লেখ কৰক যাতে কাৰিকৰী দল ততালিকে স্থানত উপস্থিত হ’ব পাৰে।'
+              : 'Provide specific room number, floor, or nearby building pillar so workers can reach the spot instantly.'}
           </p>
         </div>
-
-        {/* Real-time Bilingual Preview Box */}
-        {(title.trim() || description.trim()) && (() => {
-          const isAs = isAssameseText(title + ' ' + description);
-          const currentTitleEn = preCheckData?.translations?.titleEn || (isAs ? quickTranslateText(title, 'en') : title);
-          const currentTitleAs = preCheckData?.translations?.titleAs || (isAs ? title : quickTranslateText(title, 'as'));
-          const currentDescEn = preCheckData?.translations?.descriptionEn || (isAs ? quickTranslateText(description, 'en') : description);
-          const currentDescAs = preCheckData?.translations?.descriptionAs || (isAs ? description : quickTranslateText(description, 'as'));
-
-          return (
-            <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/70 via-white to-emerald-50/50 p-4 shadow-sm animate-fadeIn">
-              <div className="flex items-center justify-between pb-2 border-b border-indigo-100 mb-3">
-                <div className="flex items-center space-x-2 text-xs font-bold text-indigo-950">
-                  <Languages className="w-4 h-4 text-indigo-600" />
-                  <span>
-                    {lang === 'as' ? 'দ্বিভাষিক অনুবাদ (একত্ৰে ইংৰাজী আৰু অসমীয়া)' : 'Bilingual Dual Output (English + Assamese Together)'}
-                  </span>
-                </div>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
-                  ✓ Auto-Synced
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                {/* English Box */}
-                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
-                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5">
-                    <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">EN</span>
-                    <span>English Version</span>
-                  </div>
-                  <div className="font-bold text-slate-900 text-xs mb-1">
-                    {currentTitleEn || 'Drafting Title...'}
-                  </div>
-                  <div className="text-[11px] text-slate-600 line-clamp-3 leading-relaxed">
-                    {currentDescEn || 'Drafting details...'}
-                  </div>
-                </div>
-
-                {/* Assamese Box */}
-                <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200 shadow-2xs font-assamese">
-                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1.5">
-                    <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">অসমীয়া</span>
-                    <span>অসমীয়া সংস্কৰণ</span>
-                  </div>
-                  <div className="font-bold text-slate-900 text-xs mb-1">
-                    {currentTitleAs || 'শিৰোনাম প্ৰস্তুত হৈছে...'}
-                  </div>
-                  <div className="text-[11px] text-slate-700 line-clamp-3 leading-relaxed">
-                    {currentDescAs || 'অভিযোগৰ বিৱৰণ প্ৰস্তুত হৈছে...'}
-                  </div>
-                </div>
-              </div>
-
-              <p className="text-[10px] text-slate-500 mt-2.5 flex items-center gap-1">
-                <span>ℹ️</span>
-                <span>
-                  {lang === 'as'
-                    ? 'আপুনি যিকোনো ভাষাত লিখিলেও কৰ্মী, প্ৰশাসক আৰু ছাত্ৰসকলে ইংৰাজী আৰু অসমীয়া দুয়োটা সংস্কৰণ একেলগে চাব পাৰিব।'
-                    : 'Grievance is auto-stored in both English and Assamese so workers and admins can inspect either or both languages together.'}
-                </span>
-              </p>
-            </div>
-          );
-        })()}
 
         {/* Location & Dynamic Category Dropdowns */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -464,41 +406,45 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
           <div className="flex flex-col sm:flex-row items-center gap-4">
             <label className="flex-1 w-full flex flex-col items-center justify-center p-4 border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100 transition-all">
               <ImageIcon className="w-6 h-6 text-slate-400 mb-1" />
-              <span className="text-xs font-semibold text-slate-600">Choose photo or drag file</span>
+              <span className="text-xs font-semibold text-slate-600">
+                {lang === 'as' ? 'ফটো বাছনি কৰক বা ফাইল টানি আনক' : 'Choose photo or drag file'}
+              </span>
               <span className="text-[10px] text-slate-400">JPG, PNG, WebP</span>
               <input type="file" accept="image/*" onChange={handleImageChange} className="hidden" />
             </label>
 
             <div className="w-full sm:w-auto flex flex-col gap-1.5 text-[11px]">
-              <span className="text-[10px] font-bold text-slate-500">Quick Sample Photos (ডেমো ফটো):</span>
+              <span className="text-[10px] font-bold text-slate-500">
+                {lang === 'as' ? 'ডেমো ফটো নিৰ্বাচন কৰক:' : 'Quick Sample Photos:'}
+              </span>
               <div className="flex flex-wrap gap-1">
                 <button
                   type="button"
                   onClick={() => selectSamplePhoto('water')}
                   className="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-100 text-slate-700 text-[10px] border border-slate-200"
                 >
-                  💧 Pipe Leak
+                  {lang === 'as' ? '💧 পানীৰ পাইপ লিক' : '💧 Pipe Leak'}
                 </button>
                 <button
                   type="button"
                   onClick={() => selectSamplePhoto('pothole')}
                   className="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-100 text-slate-700 text-[10px] border border-slate-200"
                 >
-                  🕳️ Road Pothole
+                  {lang === 'as' ? '🕳️ পথৰ গাঁত' : '🕳️ Road Pothole'}
                 </button>
                 <button
                   type="button"
                   onClick={() => selectSamplePhoto('electric')}
                   className="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-100 text-slate-700 text-[10px] border border-slate-200"
                 >
-                  ⚡ Dark Street
+                  {lang === 'as' ? '⚡ অন্ধকাৰ বাট' : '⚡ Dark Street'}
                 </button>
                 <button
                   type="button"
                   onClick={() => selectSamplePhoto('cooler')}
                   className="px-2 py-1 rounded bg-slate-100 hover:bg-emerald-100 text-slate-700 text-[10px] border border-slate-200"
                 >
-                  🥤 Water Cooler
+                  {lang === 'as' ? '🥤 পানী ফিল্টাৰ' : '🥤 Water Cooler'}
                 </button>
               </div>
             </div>
@@ -508,7 +454,7 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
             <div className="mt-3 relative rounded-xl overflow-hidden border border-slate-200 bg-slate-900 max-h-48 flex items-center justify-center">
               <img src={imagePreview} alt="Preview" className="object-cover max-h-48 w-full" />
               <div className="absolute bottom-2 left-2 bg-slate-900/80 backdrop-blur-sm text-emerald-400 text-[10px] font-bold px-2.5 py-1 rounded-md border border-emerald-500/40">
-                ✓ Photo Attached for AI Multimodal Inspection
+                {lang === 'as' ? '✓ এআই নিৰীক্ষণৰ বাবে ফটো সংলগ্ন হ’ল' : '✓ Photo Attached for AI Vision Inspection'}
               </div>
             </div>
           )}
@@ -523,14 +469,16 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
                 <span>{t('aiPreCheckTitle')}</span>
               </div>
               {preCheckLoading && (
-                <span className="text-[11px] text-indigo-300 animate-pulse">Analyzing...</span>
+                <span className="text-[11px] text-indigo-300 animate-pulse">
+                  {lang === 'as' ? 'পৰীক্ষণ চলি আছে...' : 'Analyzing...'}
+                </span>
               )}
             </div>
 
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs mb-3">
               <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <div className="text-slate-400 text-[10px]">{t('detectedCategory')}</div>
-                <div className="font-bold text-emerald-300 mt-0.5 truncate">
+                <div className="font-bold text-emerald-300 mt-0.5 truncate font-assamese">
                   {lang === 'as' ? preCheckData.classification?.categoryName?.as : preCheckData.classification?.categoryName?.en}
                 </div>
               </div>
@@ -540,13 +488,15 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
                 <div className={`font-bold mt-0.5 uppercase ${
                   preCheckData.classification?.priority === 'critical' ? 'text-rose-400 animate-pulse' : 'text-amber-400'
                 }`}>
-                  {preCheckData.classification?.priority} ({preCheckData.classification?.urgencyScore}/100)
+                  {lang === 'as' 
+                    ? (preCheckData.classification?.priority === 'critical' ? 'জৰুৰীকালীন' : preCheckData.classification?.priority === 'high' ? 'উচ্চ' : 'সাধাৰণ')
+                    : preCheckData.classification?.priority} ({preCheckData.classification?.urgencyScore}/100)
                 </div>
               </div>
 
               <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <div className="text-slate-400 text-[10px]">{t('assignedDept')}</div>
-                <div className="font-bold text-sky-300 mt-0.5 truncate">
+                <div className="font-bold text-sky-300 mt-0.5 truncate font-assamese">
                   {lang === 'as' ? preCheckData.classification?.department?.as : preCheckData.classification?.department?.en}
                 </div>
               </div>
@@ -554,7 +504,7 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
               <div className="bg-slate-800/80 p-2 rounded-lg border border-slate-700">
                 <div className="text-slate-400 text-[10px]">{t('estimatedSla')}</div>
                 <div className="font-bold text-white mt-0.5">
-                  Within {preCheckData.classification?.slaHours} Hours
+                  {lang === 'as' ? `${preCheckData.classification?.slaHours} ঘণ্টাৰ ভিতৰত` : `Within ${preCheckData.classification?.slaHours} Hours`}
                 </div>
               </div>
             </div>
@@ -565,7 +515,10 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
                 <div className="flex items-center space-x-2">
                   <AlertCircle className="w-4 h-4 text-amber-400 flex-shrink-0" />
                   <span>
-                    <strong>Duplicate Warning:</strong> Matches #{preCheckData.duplicates.topDuplicate.ticketId} ({preCheckData.duplicates.topDuplicate.similarity}% semantic similarity).
+                    <strong>{lang === 'as' ? 'অনুৰূপ অভিযোগৰ সতৰ্কবাৰ্তা:' : 'Duplicate Warning:'}</strong>{' '}
+                    {lang === 'as' 
+                      ? `টিকট #${preCheckData.duplicates.topDuplicate.ticketId} ৰ সৈতে ${preCheckData.duplicates.topDuplicate.similarity}% সাদৃশ্য পোৱা গৈছে।`
+                      : `Matches #${preCheckData.duplicates.topDuplicate.ticketId} (${preCheckData.duplicates.topDuplicate.similarity}% semantic similarity).`}
                   </span>
                 </div>
               </div>
@@ -586,7 +539,10 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
           </label>
 
           <span className="text-slate-500 text-[11px]">
-            Submitting as: <strong className="text-slate-800">{anonymous ? 'Anonymous' : (user?.name || reporterName)}</strong>
+            {lang === 'as' ? 'দাখিলকাৰী:' : 'Submitting as:'}{' '}
+            <strong className="text-slate-800">
+              {anonymous ? (lang === 'as' ? 'গোপনীয় ছাত্ৰ' : 'Anonymous') : (user?.name || reporterName)}
+            </strong>
           </span>
         </div>
 

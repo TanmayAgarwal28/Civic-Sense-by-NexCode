@@ -319,9 +319,9 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
   const handleDeleteRoster = (entry) => {
     setConfirmModal({
       open: true,
-      title: 'Delete Pre-Admission Roster Entry',
-      message: `Are you sure you want to delete ${entry.rollNo} (${entry.name}) from the official pre-admission roster?`,
-      confirmText: 'Delete Roster',
+      title: lang === 'as' ? 'প্ৰাক-নামভৰ্তি ৰষ্টাৰ তথ্য মচি পেলাওক' : 'Delete Pre-Admission Roster Entry',
+      message: lang === 'as' ? `আপুনি নিশ্চিতনে যে ৰোল নম্বৰ ${entry.rollNo} (${entry.name}) ৰষ্টাৰৰ পৰা মচিব বিচাৰে?` : `Are you sure you want to delete ${entry.rollNo} (${entry.name}) from the official pre-admission roster?`,
+      confirmText: lang === 'as' ? 'মচি পেলাওক' : 'Delete Roster',
       onConfirm: async () => {
         setUserData(prev => ({
           ...prev,
@@ -345,9 +345,9 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
     const recordId = item.id || item.ticketId || item.rollNo;
     setConfirmModal({
       open: true,
-      title: `Delete Record from [${collection}]`,
-      message: `Are you sure you want to permanently delete record "${displayId || recordId}" from database collection "${collection}"? This will modify backend/data/issues.json immediately.`,
-      confirmText: 'Delete Record',
+      title: lang === 'as' ? `[${collection}] ৰ পৰা তথ্য মচি পেলাওক` : `Delete Record from [${collection}]`,
+      message: lang === 'as' ? `আপুনি নিশ্চিতনে যে "${displayId || recordId}" তথ্যটো "${collection}" তালিকাৰ পৰা স্থায়ীভাৱে মচিব বিচাৰে? ইয়াৰ দ্বাৰা backend/data/issues.json ফাইল পোনপটীয়াকৈ সলনি হ'ব।` : `Are you sure you want to permanently delete record "${displayId || recordId}" from database collection "${collection}"? This will modify backend/data/issues.json immediately.`,
+      confirmText: lang === 'as' ? 'মচি পেলাওক' : 'Delete Record',
       onConfirm: async () => {
         showToast(`Record ${displayId || recordId} deleted from ${collection}.`);
         try {
@@ -1009,10 +1009,10 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold bg-white text-slate-700 cursor-pointer"
               >
-                <option value="all">{lang === 'as' ? 'সকলো স্থিতি (All Statuses)' : 'All Statuses'}</option>
-                <option value="reported">{lang === 'as' ? 'নথিভুক্ত (Reported)' : 'Reported'}</option>
-                <option value="in_progress">{lang === 'as' ? 'মেৰামতি চলি থকা (In Progress)' : 'In Progress'}</option>
-                <option value="resolved">{lang === 'as' ? 'সমাধান আৰু প্ৰমাণিত (Resolved)' : 'Resolved & Verified'}</option>
+                <option value="all">{lang === 'as' ? 'সকলো স্থিতি' : 'All Statuses'}</option>
+                <option value="reported">{lang === 'as' ? 'নথিভুক্ত অভিযোগ' : 'Reported'}</option>
+                <option value="in_progress">{lang === 'as' ? 'মেৰামতি চলি থকা' : 'In Progress'}</option>
+                <option value="resolved">{lang === 'as' ? 'সমাধান আৰু প্ৰমাণিত' : 'Resolved & Verified'}</option>
               </select>
             </div>
           </div>
@@ -1044,21 +1044,11 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                         
                         <td className="px-4 py-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
                           #{issue.ticketId}
-                          <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-800 font-sans font-bold">
-                            EN+AS
-                          </span>
                         </td>
 
                         <td className="px-4 py-3.5 max-w-xs sm:max-w-md">
-                          <div className="space-y-1">
-                            <div className="flex items-start gap-1.5">
-                              <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase shrink-0 mt-0.5">EN</span>
-                              <span className="font-bold text-slate-900 line-clamp-1 text-xs">{bi.titleEn}</span>
-                            </div>
-                            <div className="flex items-start gap-1.5">
-                              <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase shrink-0 mt-0.5 font-assamese">অসমীয়া</span>
-                              <span className="font-semibold text-slate-700 line-clamp-1 text-xs font-assamese">{bi.titleAs}</span>
-                            </div>
+                          <div className="font-bold text-slate-900 line-clamp-1 font-assamese text-sm">
+                            {lang === 'as' ? bi.titleAs : bi.titleEn}
                           </div>
                           {issue.address && (
                             <div className="text-[11px] text-amber-700 font-medium mt-1 flex items-center">
@@ -2159,34 +2149,22 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60">
                               #{issue.ticketId}
                             </span>
-                            <div className="flex items-center space-x-1">
-                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800/60">
-                                EN+AS
-                              </span>
-                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                                issue.status === 'resolved' ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' :
-                                issue.status === 'in_progress' ? 'bg-amber-900/80 text-amber-300 border border-amber-700' :
-                                'bg-slate-800 text-slate-300 border border-slate-700'
-                              }`}>
-                                {issue.status === 'resolved' ? (lang === 'as' ? 'সমাধান হ’ল' : 'Resolved') :
-                                 issue.status === 'in_progress' ? (lang === 'as' ? 'চলি আছে' : 'In Progress') :
-                                 (lang === 'as' ? 'দাখিল কৰা হ’ল' : issue.status)}
-                              </span>
-                            </div>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              issue.status === 'resolved' ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' :
+                              issue.status === 'in_progress' ? 'bg-amber-900/80 text-amber-300 border border-amber-700' :
+                              'bg-slate-800 text-slate-300 border border-slate-700'
+                            }`}>
+                              {issue.status === 'resolved' ? (lang === 'as' ? 'সমাধান হ’ল' : 'Resolved') :
+                               issue.status === 'in_progress' ? (lang === 'as' ? 'চলি আছে' : 'In Progress') :
+                               (lang === 'as' ? 'দাখিল কৰা হ’ল' : issue.status)}
+                            </span>
                           </div>
 
-                          <div className="space-y-1 mb-2">
-                            <div className="flex items-start gap-1">
-                              <span className="text-[8px] font-bold px-1 rounded bg-emerald-900/60 text-emerald-300 uppercase shrink-0 mt-0.5">EN</span>
-                              <h5 className="font-bold text-xs text-white line-clamp-1">{bi.titleEn}</h5>
-                            </div>
-                            <div className="flex items-start gap-1">
-                              <span className="text-[8px] font-bold px-1 rounded bg-amber-900/60 text-amber-300 uppercase shrink-0 mt-0.5 font-assamese">অসমীয়া</span>
-                              <h5 className="font-medium text-xs text-slate-300 line-clamp-1 font-assamese">{bi.titleAs}</h5>
-                            </div>
-                          </div>
+                          <h5 className="font-bold text-sm text-white line-clamp-1 mb-1 font-assamese">
+                            {lang === 'as' ? bi.titleAs : bi.titleEn}
+                          </h5>
 
-                          <p className="text-[11px] text-slate-400 line-clamp-2 mb-2 leading-relaxed">
+                          <p className="text-xs text-slate-400 line-clamp-2 mb-2 leading-relaxed font-assamese">
                             {lang === 'as' ? bi.descriptionAs : bi.descriptionEn}
                           </p>
 
@@ -2551,11 +2529,11 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   onChange={(e) => setNewStatus(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
                 >
-                  <option value="investigating">{lang === 'as' ? 'তদন্ত চলি আছে (Investigating)' : 'Investigating (তদন্ত চলি আছে)'}</option>
-                  <option value="in_progress">{lang === 'as' ? 'মেৰামতি চলি আছে (In Progress)' : 'In Progress (মেৰামতি চলি আছে)'}</option>
-                  <option value="assigned">{lang === 'as' ? 'কাৰিকৰী দল প্ৰেৰিত (Assigned to Crew)' : 'Assigned to Crew (কাৰিকৰী দল প্ৰেৰিত)'}</option>
-                  <option value="resolved">{lang === 'as' ? 'সমাধান আৰু প্ৰমাণিত (Resolved & Verified)' : 'Resolved & Verified (সমাধান আৰু প্ৰমাণিত)'}</option>
-                  <option value="closed">{lang === 'as' ? 'বন্ধ কৰা হ’ল (Closed)' : 'Closed (বন্ধ কৰা হ’ল)'}</option>
+                  <option value="investigating">{lang === 'as' ? 'তদন্ত চলি আছে' : 'Investigating'}</option>
+                  <option value="in_progress">{lang === 'as' ? 'মেৰামতি চলি আছে' : 'In Progress'}</option>
+                  <option value="assigned">{lang === 'as' ? 'কাৰিকৰী দল প্ৰেৰিত' : 'Assigned to Crew'}</option>
+                  <option value="resolved">{lang === 'as' ? 'সমাধান আৰু প্ৰমাণিত' : 'Resolved & Verified'}</option>
+                  <option value="closed">{lang === 'as' ? 'বন্ধ কৰা হ’ল' : 'Closed'}</option>
                 </select>
               </div>
 

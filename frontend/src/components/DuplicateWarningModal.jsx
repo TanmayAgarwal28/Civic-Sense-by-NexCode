@@ -34,7 +34,7 @@ export function DuplicateWarningModal({ isOpen, onClose, duplicate, onUpvoteExis
               <span>{t('similarityScore')}:</span>
             </span>
             <span className="text-sm font-extrabold text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded border border-amber-500/30">
-              {duplicate.similarity}% Match
+              {duplicate.similarity}% {lang === 'as' ? 'সাদৃশ্য' : 'Match'}
             </span>
           </div>
 
@@ -53,12 +53,12 @@ export function DuplicateWarningModal({ isOpen, onClose, duplicate, onUpvoteExis
                 {duplicate.location}
               </span>
             </div>
-            <h4 className="text-sm font-bold text-white mb-1.5 leading-snug">
-              {duplicate.title}
+            <h4 className="text-sm font-bold text-white mb-1.5 leading-snug font-assamese">
+              {lang === 'as' ? (duplicate.titleAs || duplicate.title) : (duplicate.titleEn || duplicate.title)}
             </h4>
-            <div className="text-xs text-slate-300 bg-slate-800/60 p-2 rounded border border-slate-700/60">
+            <div className="text-xs text-slate-300 bg-slate-800/60 p-2 rounded border border-slate-700/60 font-assamese">
               <strong>{lang === 'as' ? 'এআই সাদৃশ্যৰ কাৰণ:' : 'AI Correlation Reason:'}</strong>{' '}
-              {lang === 'as' ? duplicate.reason?.as : duplicate.reason?.en}
+              {lang === 'as' ? (duplicate.reason?.as || duplicate.reason?.en || duplicate.reason) : (duplicate.reason?.en || duplicate.reason?.as || duplicate.reason)}
             </div>
           </div>
         </div>

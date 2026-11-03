@@ -1,9 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { 
   X, MapPin, Clock, ThumbsUp, ShieldAlert, CheckCircle2, 
-  FileText, Sparkles, User, Calendar, ExternalLink, Star, Languages 
+  FileText, Sparkles, User, Calendar, ExternalLink, Star 
 } from 'lucide-react';
 
 export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
@@ -11,12 +11,18 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
   const [rating, setRating] = useState(issue?.rating || 0);
   const [hasRated, setHasRated] = useState(false);
   const [activeSummaryTab, setActiveSummaryTab] = useState(lang === 'as' ? 'as' : 'en');
-  const [langMode, setLangMode] = useState('both'); // 'both' | 'en' | 'as'
+
+  useEffect(() => {
+    setActiveSummaryTab(lang === 'as' ? 'as' : 'en');
+  }, [lang]);
 
   if (!isOpen || !issue) return null;
 
   const bi = getIssueBilingual(issue);
   const isResolved = issue.status === 'resolved' || issue.status === 'closed';
+
+  const displayTitle = lang === 'as' ? bi.titleAs : bi.titleEn;
+  const displayDescription = lang === 'as' ? bi.descriptionAs : bi.descriptionEn;
 
   const handleRate = (star) => {
     setRating(star);
@@ -39,74 +45,19 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                   ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 animate-pulse'
                   : 'bg-amber-500/20 text-amber-300 border-amber-500/40'
               }`}>
-                {issue.priority} Priority
+                {lang === 'as' 
+                  ? (issue.priority === 'critical' ? 'জৰুৰীকালীন অগ্ৰাধিকাৰ' : issue.priority === 'high' ? 'উচ্চ অগ্ৰাধিকাৰ' : issue.priority === 'low' ? 'নিম্ন অগ্ৰাধিকাৰ' : 'মধ্যম অগ্ৰাধিকাৰ')
+                  : `${issue.priority} Priority`}
               </span>
               <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
-                SLA: {issue.slaHours || 24} Hours
+                {lang === 'as' ? `সময়সীমা: ${issue.slaHours || 24} ঘণ্টা` : `SLA: ${issue.slaHours || 24} Hours`}
               </span>
-
-              {/* Language Display Mode Toggle */}
-              <div className="ml-auto flex items-center bg-slate-800/90 p-0.5 rounded-xl border border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setLangMode('both')}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
-                    langMode === 'both' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                  }`}
-                  title="View both English and Assamese"
-                >
-                  {lang === 'as' ? 'দুয়োটা (Both)' : 'Both (EN+AS)'}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLangMode('en')}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
-                    langMode === 'en' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  EN
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setLangMode('as')}
-                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
-                    langMode === 'as' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
-                  }`}
-                >
-                  অসমীয়া
-                </button>
-              </div>
             </div>
 
-            {/* Bilingual or Single Title */}
-            {langMode === 'both' ? (
-              <div className="space-y-1.5 mt-2 mb-1">
-                <div className="flex items-start gap-1.5">
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 uppercase shrink-0 mt-0.5">
-                    EN
-                  </span>
-                  <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
-                    {bi.titleEn}
-                  </h3>
-                </div>
-                <div className="flex items-start gap-1.5">
-                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/30 text-amber-300 border border-amber-500/40 uppercase shrink-0 mt-0.5 font-assamese">
-                    অসমীয়া
-                  </span>
-                  <h3 className="text-sm sm:text-base font-semibold text-slate-200 leading-snug font-assamese">
-                    {bi.titleAs}
-                  </h3>
-                </div>
-              </div>
-            ) : langMode === 'en' ? (
-              <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug mt-1">
-                {bi.titleEn}
-              </h3>
-            ) : (
-              <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug font-assamese mt-1">
-                {bi.titleAs}
-              </h3>
-            )}
+            {/* Clean Single Title in Active Language */}
+            <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug mt-1 font-assamese">
+              {displayTitle}
+            </h3>
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-2">
               <span className="flex items-center">
@@ -121,14 +72,14 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
 
             {issue.address && (
               <div className="mt-2 text-xs bg-slate-800/80 text-amber-300 px-3 py-1 rounded-xl border border-amber-500/30 font-medium">
-                📍 <strong>Specific Address:</strong> {issue.address}
+                📍 <strong>{lang === 'as' ? 'সঠিক ঠিকনা:' : 'Specific Address:'}</strong> {issue.address}
               </div>
             )}
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-2"
+            className="p-1.5 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-colors ml-2 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -143,7 +94,7 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
               <ShieldAlert className="w-6 h-6 text-rose-600 flex-shrink-0 mt-0.5" />
               <div>
                 <h4 className="font-bold text-sm text-rose-900">
-                  {lang === 'as' ? 'যৌগিক বিপদ সতৰ্কতা (Water + Live Electricity)' : 'Critical Compound Safety Hazard Detected!'}
+                  {lang === 'as' ? 'যৌগিক বিপদ সতৰ্কতা: পানী আৰু সক্ৰিয় বিদ্যুৎ' : 'Critical Compound Safety Hazard Detected!'}
                 </h4>
                 <p className="text-xs text-rose-700 mt-1 leading-relaxed font-assamese">
                   {lang === 'as'
@@ -167,37 +118,10 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
               </span>
             </div>
 
-            {/* Bilingual or Single Description Display */}
-            {langMode === 'both' ? (
-              <div className="space-y-3">
-                <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
-                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
-                    <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">EN</span>
-                    <span>English Statement</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
-                    {bi.descriptionEn}
-                  </p>
-                </div>
-                <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200/80 shadow-2xs font-assamese">
-                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">
-                    <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">অসমীয়া</span>
-                    <span>অসমীয়া অভিযোগ বিৱৰণ</span>
-                  </div>
-                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-assamese whitespace-pre-wrap">
-                    {bi.descriptionAs}
-                  </p>
-                </div>
-              </div>
-            ) : langMode === 'en' ? (
-              <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
-                {bi.descriptionEn}
-              </p>
-            ) : (
-              <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-assamese">
-                {bi.descriptionAs}
-              </p>
-            )}
+            {/* Clean Single Description in Active Language */}
+            <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-assamese">
+              {displayDescription}
+            </p>
           </div>
 
           {/* Evidence Photos (Multimodal Inspection) */}
@@ -217,9 +141,9 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                       {t('beforePhoto')}
                     </span>
                   </div>
-                  <div className="p-2.5 text-[11px] text-slate-300 bg-slate-900">
-                    <span className="font-semibold text-emerald-400">AI Vision Inspection:</span>{' '}
-                    Liquid ingress and physical damage confirmed.
+                  <div className="p-2.5 text-[11px] text-slate-300 bg-slate-900 font-assamese">
+                    <span className="font-semibold text-emerald-400">{lang === 'as' ? 'এআই পৰীক্ষণ:' : 'AI Vision Inspection:'}</span>{' '}
+                    {lang === 'as' ? 'তৰল পদাৰ্থ বিয়পা আৰু ভৌতিক ক্ষতি নিশ্চিত।' : 'Liquid ingress and physical damage confirmed.'}
                   </div>
                 </div>
 
@@ -232,16 +156,16 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                         {t('afterPhoto')}
                       </span>
                     </div>
-                    <div className="p-2.5 text-[11px] text-emerald-300 bg-slate-900">
-                      ✓ Post-repair physical verification signed by Maintenance Officer.
+                    <div className="p-2.5 text-[11px] text-emerald-300 bg-slate-900 font-assamese">
+                      {lang === 'as' ? '✓ মেৰামতিৰ পিছৰ ভৌতিক প্ৰমাণ কাৰিকৰী বিষয়াৰ দ্বাৰা সত্যায়িত।' : '✓ Post-repair physical verification signed by Maintenance Officer.'}
                     </div>
                   </div>
                 ) : (
                   <div className="rounded-2xl border-2 border-dashed border-slate-200 p-6 flex flex-col items-center justify-center text-center text-slate-400">
                     <Clock className="w-8 h-8 text-slate-300 mb-2" />
-                    <span className="text-xs font-semibold">Post-Repair Resolution Proof</span>
+                    <span className="text-xs font-semibold">{lang === 'as' ? 'মেৰামতিৰ পিছৰ প্ৰমাণস্বৰূপ ফটো' : 'Post-Repair Resolution Proof'}</span>
                     <span className="text-[10px] text-slate-400 mt-1">
-                      Maintenance officer will attach verified photo upon task completion.
+                      {lang === 'as' ? 'কাম সম্পূৰ্ণ হোৱাৰ পিছত কাৰিকৰী বিষয়াই পৰীক্ষিত ফটো সংলগ্ন কৰিব।' : 'Maintenance officer will attach verified photo upon task completion.'}
                     </span>
                   </div>
                 )}
@@ -266,7 +190,7 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                       activeSummaryTab === 'as' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    অসমীয়া (AS)
+                    {lang === 'as' ? 'অসমীয়া' : 'Assamese'}
                   </button>
                   <button
                     onClick={() => setActiveSummaryTab('en')}
@@ -274,7 +198,7 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                       activeSummaryTab === 'en' ? 'bg-emerald-600 text-white' : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    English (EN)
+                    {lang === 'as' ? 'ইংৰাজী' : 'English'}
                   </button>
                 </div>
               </div>
@@ -288,7 +212,7 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                   {issue.actionPlan?.as && (
                     <div className="mt-3 pt-3 border-t border-slate-800">
                       <div className="font-bold text-emerald-300 mb-1.5">
-                        🛠️ পৰামৰ্শিত বিভাগীয় পদক্ষেপ (Action Protocol):
+                        {lang === 'as' ? '🛠️ পৰামৰ্শিত বিভাগীয় কাৰ্য্যসূচী:' : '🛠️ Recommended Maintenance Action Protocol:'}
                       </div>
                       <ul className="list-disc pl-4 space-y-1 text-slate-300">
                         {issue.actionPlan.as.map((st, i) => (
@@ -356,8 +280,8 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
               <h4 className="text-sm font-bold text-emerald-900 mb-1">
                 {t('citizenRatingHeading')}
               </h4>
-              <p className="text-xs text-emerald-700 mb-3">
-                How satisfied are you with the promptness and quality of this resolution?
+              <p className="text-xs text-emerald-700 mb-3 font-assamese">
+                {lang === 'as' ? 'এই সমাধানৰ তৎপৰতা আৰু গুণগত মানত আপুনি কিমান সন্তুষ্ট?' : 'How satisfied are you with the promptness and quality of this resolution?'}
               </p>
               
               <div className="flex items-center justify-center space-x-2">
@@ -380,8 +304,8 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
               </div>
 
               {hasRated && (
-                <p className="text-xs font-bold text-emerald-800 mt-2">
-                  ✓ {t('ratingThankYou')} (Rated {rating}/5)
+                <p className="text-xs font-bold text-emerald-800 mt-2 font-assamese">
+                  {lang === 'as' ? `✓ ${t('ratingThankYou')} (ৰেটিং ${rating}/৫)` : `✓ ${t('ratingThankYou')} (Rated ${rating}/5)`}
                 </p>
               )}
             </div>

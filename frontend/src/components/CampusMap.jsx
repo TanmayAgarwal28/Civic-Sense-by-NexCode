@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { fetchLocations } from '../api.js';
+import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { MapPin, Navigation, Sparkles, Building, Layers, Eye } from 'lucide-react';
 
 export function CampusMap({ issues = [], onFilterByZone }) {
@@ -91,11 +92,13 @@ export function CampusMap({ issues = [], onFilterByZone }) {
                 {lang === 'as' ? 'চৌহদৰ সক্ৰিয় ভৌগোলিক মানচিত্ৰ' : 'Interactive Campus Geo-Spatial Incident Map'}
               </h3>
               <span className="px-2 py-0.5 rounded text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-semibold">
-                Editable via Admin & Code
+                {lang === 'as' ? 'প্ৰশাসনৰ দ্বাৰা সম্পাদনাযোগ্য' : 'Editable via Admin & Code'}
               </span>
             </div>
             <p className="text-xs text-slate-400 mt-0.5">
-              Click any campus facility or corridor to inspect localized incidents and active dispatches.
+              {lang === 'as' 
+                ? 'চৌহদৰ যিকোনো ভৱন বা পথত ক্লিক কৰি সেই অঞ্চলৰ কাৰ্য্যসূচী আৰু সমস্যাসমূহ পৰিদৰ্শন কৰক।' 
+                : 'Click any campus facility or corridor to inspect localized incidents and active dispatches.'}
             </p>
           </div>
         </div>
@@ -103,20 +106,23 @@ export function CampusMap({ issues = [], onFilterByZone }) {
         {/* Legend */}
         <div className="flex items-center space-x-3 text-[11px] text-slate-400 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700">
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mr-1.5 animate-pulse" /> Critical Alert
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500 mr-1.5 animate-pulse" />{' '}
+            {lang === 'as' ? 'জৰুৰীকালীন' : 'Critical Alert'}
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 mr-1.5" /> High Urgency
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-400 mr-1.5" />{' '}
+            {lang === 'as' ? 'উচ্চ অগ্ৰাধিকাৰ' : 'High Urgency'}
           </span>
           <span className="flex items-center">
-            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-1.5" /> Normal / Clear
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 mr-1.5" />{' '}
+            {lang === 'as' ? 'স্বাভাৱিক / সুচল' : 'Normal / Clear'}
           </span>
         </div>
       </div>
 
       {/* Graphical Map Canvas with Mobile Responsive Scrolling */}
       <div className="block sm:hidden text-[11px] text-slate-400 mb-2 italic">
-        <span>↔️ Swipe horizontally to inspect all campus facilities</span>
+        <span>{lang === 'as' ? '↔️ সকলো চৌহদ স্থান চাবলৈ সোঁৱে-বাঁৱে স্ক্ৰল কৰক' : '↔️ Swipe horizontally to inspect all campus facilities'}</span>
       </div>
 
       <div className="overflow-x-auto pb-2 -mx-2 px-2 scrollbar-none">
@@ -162,10 +168,12 @@ export function CampusMap({ issues = [], onFilterByZone }) {
                         ? 'bg-amber-500/20 text-amber-300 border-amber-500/50'
                         : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/50'
                     }`}>
-                      {stats.total} {stats.total === 1 ? 'Issue' : 'Issues'}
+                      {stats.total} {lang === 'as' ? 'সমস্যা' : (stats.total === 1 ? 'Issue' : 'Issues')}
                     </span>
                   ) : (
-                    <span className="text-[10px] text-slate-500 font-mono">Clear</span>
+                    <span className="text-[10px] text-slate-500 font-mono">
+                      {lang === 'as' ? 'সুচল' : 'Clear'}
+                    </span>
                   )}
                 </div>
 
@@ -177,7 +185,7 @@ export function CampusMap({ issues = [], onFilterByZone }) {
                 {/* Critical Hazard Alert Tag */}
                 {stats.hasCritical && (
                   <span className="mt-1 text-[9px] font-bold text-rose-300 bg-rose-950/80 px-1.5 py-0.5 rounded border border-rose-800">
-                    ⚡ Critical Triage
+                    {lang === 'as' ? '⚡ জৰুৰীকালীন' : '⚡ Critical Triage'}
                   </span>
                 )}
               </div>
@@ -194,20 +202,22 @@ export function CampusMap({ issues = [], onFilterByZone }) {
               </span>
               <button
                 onClick={() => setSelectedZone(null)}
-                className="text-slate-400 hover:text-white text-xs"
+                className="text-slate-400 hover:text-white text-xs cursor-pointer"
               >
                 ✕
               </button>
             </div>
             
             <div className="text-xs text-slate-300 mb-1">
-              Active grievances in this sector: <strong>{getZoneStats(selectedZone.id).total}</strong>
+              {lang === 'as'
+                ? `এই স্থানত সক্ৰিয় অভিযোগ: ${getZoneStats(selectedZone.id).total}`
+                : `Active grievances in this sector: ${getZoneStats(selectedZone.id).total}`}
             </div>
 
             {/* Geo-Spatial Coordinates & Placement Details */}
             <div className="text-[10px] text-slate-400 bg-slate-950/80 p-2 rounded-xl border border-slate-800 mb-2">
               <div className="flex items-center justify-between text-emerald-400 font-mono">
-                <span>📍 Map Coordinates:</span>
+                <span>📍 {lang === 'as' ? 'মানচিত্ৰ স্থানাংক:' : 'Map Coordinates:'}</span>
                 <span>X: {selectedZone.x}%, Y: {selectedZone.y}%</span>
               </div>
               {selectedZone.distanceMeters && selectedZone.direction && (
@@ -219,17 +229,24 @@ export function CampusMap({ issues = [], onFilterByZone }) {
 
             <div className="space-y-1.5 max-h-36 overflow-y-auto">
               {getZoneStats(selectedZone.id).issues.length === 0 ? (
-                <div className="text-[11px] text-slate-400 italic">No open grievances reported in this sector.</div>
+                <div className="text-[11px] text-slate-400 italic">
+                  {lang === 'as' ? 'এই স্থানত কোনো অমীমাংসিত অভিযোগ নাই।' : 'No open grievances reported in this sector.'}
+                </div>
               ) : (
-                getZoneStats(selectedZone.id).issues.map(iss => (
-                  <div key={iss.id} className="p-2 bg-slate-800 rounded-lg text-[11px] border border-slate-700">
-                    <div className="font-bold text-white truncate font-assamese">{iss.title}</div>
-                    <div className="text-slate-400 mt-0.5 flex justify-between">
-                      <span>#{iss.ticketId}</span>
-                      <span className="uppercase text-amber-400 font-semibold">{iss.priority}</span>
+                getZoneStats(selectedZone.id).issues.map(iss => {
+                  const issBi = getIssueBilingual(iss);
+                  return (
+                    <div key={iss.id} className="p-2 bg-slate-800 rounded-lg text-[11px] border border-slate-700">
+                      <div className="font-bold text-white truncate font-assamese">
+                        {lang === 'as' ? issBi.titleAs : issBi.titleEn}
+                      </div>
+                      <div className="text-slate-400 mt-0.5 flex justify-between">
+                        <span>#{iss.ticketId}</span>
+                        <span className="uppercase text-amber-400 font-semibold">{iss.priority}</span>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -242,7 +259,13 @@ export function CampusMap({ issues = [], onFilterByZone }) {
       <div className="mt-4 p-3 rounded-2xl bg-slate-800/50 border border-slate-700/60 text-xs text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
         <span className="flex items-center">
           <Sparkles className="w-4 h-4 mr-2 text-emerald-400 flex-shrink-0" />
-          <span><strong>How to Edit the Map:</strong> Add or delete campus zones in the Admin Dashboard, or edit coordinates <code className="bg-slate-900 px-1 py-0.5 rounded text-emerald-300">(x, y)</code> in <code className="bg-slate-900 px-1 py-0.5 rounded text-emerald-300">frontend/src/components/CampusMap.jsx</code>.</span>
+          <span>
+            {lang === 'as' ? (
+              <><strong>মানচিত্ৰ সম্পাদনা:</strong> প্ৰশাসক নিয়ন্ত্ৰণ ফলকত নতুন স্থান যোগ কৰক অথবা <code className="bg-slate-900 px-1 py-0.5 rounded text-emerald-300">CampusMap.jsx</code> ত স্থানাংক সলনি কৰক।</>
+            ) : (
+              <><strong>How to Edit the Map:</strong> Add or delete campus zones in the Admin Dashboard, or edit coordinates <code className="bg-slate-900 px-1 py-0.5 rounded text-emerald-300">(x, y)</code> in <code className="bg-slate-900 px-1 py-0.5 rounded text-emerald-300">frontend/src/components/CampusMap.jsx</code>.</>
+            )}
+          </span>
         </span>
       </div>
 

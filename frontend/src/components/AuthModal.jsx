@@ -196,7 +196,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                   : 'border-transparent text-slate-500 hover:text-slate-800'
               }`}
             >
-              Sign In (লগইন)
+              {lang === 'as' ? 'লগইন' : 'Sign In'}
             </button>
 
             {/* Students can create their ID; Workers are created only by Admin */}
@@ -209,7 +209,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                     : 'border-transparent text-slate-500 hover:text-slate-800'
                 }`}
               >
-                Create Student ID (নতুন ছাত্ৰ পঞ্জীয়ন)
+                {lang === 'as' ? 'নতুন ছাত্ৰ পঞ্জীয়ন' : 'Create Student ID'}
               </button>
             )}
           </div>
@@ -223,7 +223,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                   : 'text-slate-400 hover:text-slate-600'
               }`}
             >
-              Forgot Password?
+              {lang === 'as' ? 'পাছৱৰ্ড পাহৰিলে?' : 'Forgot Password?'}
             </button>
           )}
         </div>
@@ -248,9 +248,9 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           <form onSubmit={handleLogin} className="space-y-4 text-xs">
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                {activeRole === 'admin' && 'Admin ID / Username'}
-                {activeRole === 'worker' && 'Worker ID (e.g. WRK-ELEC01)'}
-                {activeRole === 'student' && 'Admission Roll No. / Student ID'}
+                {activeRole === 'admin' && (lang === 'as' ? 'প্ৰশাসক আই-ডি' : 'Admin ID / Username')}
+                {activeRole === 'worker' && (lang === 'as' ? 'কৰ্মী পৰিচয় নম্বৰ (যেনে WRK-ELEC01)' : 'Worker ID (e.g. WRK-ELEC01)')}
+                {activeRole === 'student' && (lang === 'as' ? 'নামভৰ্তি ৰোল নম্বৰ' : 'Admission Roll No. / Student ID')}
               </label>
               <input
                 type="text"
@@ -258,7 +258,11 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                 value={loginUsername}
                 onChange={(e) => setLoginUsername(e.target.value)}
                 placeholder={
-                  activeRole === 'admin' ? 'Enter Admin ID' : activeRole === 'worker' ? 'Enter Worker ID' : 'e.g. ASU2026-101'
+                  activeRole === 'admin'
+                    ? (lang === 'as' ? 'প্ৰশাসক আই-ডি দিয়ক' : 'Enter Admin ID')
+                    : activeRole === 'worker'
+                    ? (lang === 'as' ? 'কৰ্মী আই-ডি দিয়ক' : 'Enter Worker ID')
+                    : (lang === 'as' ? 'যেনে ASU2026-101' : 'e.g. ASU2026-101')
                 }
                 className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 font-medium"
               />
@@ -266,7 +270,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                Password / গোপন পাছৱৰ্ড
+                {lang === 'as' ? 'গোপন পাছৱৰ্ড' : 'Password'}
               </label>
               <input
                 type="password"
@@ -283,7 +287,13 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               disabled={loading}
               className="w-full py-3 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
             >
-              <span>{loading ? 'Verifying...' : `Sign In as ${activeRole.toUpperCase()}`}</span>
+              <span>
+                {loading
+                  ? (lang === 'as' ? 'যাচাই কৰা হৈছে...' : 'Verifying...')
+                  : (lang === 'as'
+                      ? `${activeRole === 'admin' ? 'প্ৰশাসক' : activeRole === 'worker' ? 'কৰ্মী' : 'ছাত্ৰ'} হিচাপে প্ৰৱেশ কৰক`
+                      : `Sign In as ${activeRole.toUpperCase()}`)}
+              </span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
@@ -294,13 +304,16 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           <form onSubmit={handleRegisterStudent} className="space-y-3 text-xs">
             
             <div className="p-2.5 bg-amber-50 border border-amber-200 rounded-xl text-[11px] text-amber-900">
-              <strong>Campus Admission Verification:</strong> Enter the official Admission Roll No. and Full Name registered by campus admin. If they match the roster, your student ID will be activated!
+              <strong>{lang === 'as' ? 'চৌহদ নামভৰ্তি সত্যাপন:' : 'Campus Admission Verification:'}</strong>{' '}
+              {lang === 'as' 
+                ? 'প্ৰশাসকে পঞ্জীয়ন কৰা চৰকাৰী নামভৰ্তি ৰোল নম্বৰ আৰু সম্পূৰ্ণ নাম প্ৰৱিষ্ট কৰক। ৰষ্টাৰৰ সৈতে মিল থাকিলে আপোনাৰ আইডি সক্ৰিয় হ’ব!' 
+                : 'Enter the official Admission Roll No. and Full Name registered by campus admin. If they match the roster, your student ID will be activated!'}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Admission Roll No. <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'নামভৰ্তি ৰোল নং' : 'Admission Roll No.'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -314,14 +327,14 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Full Name (As in Admission) <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'সম্পূৰ্ণ নাম (নামভৰ্তি অনুসৰি)' : 'Full Name (As in Admission)'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
                   required
                   value={regName}
                   onChange={(e) => setRegName(e.target.value)}
-                  placeholder="e.g. Demo Applicant"
+                  placeholder={lang === 'as' ? 'যেনে: প্ৰাৰ্থীৰ নাম' : 'e.g. Demo Applicant'}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium"
                 />
               </div>
@@ -329,14 +342,14 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                Create Account Password <span className="text-rose-500">*</span>
+                {lang === 'as' ? 'একাউণ্টৰ পাছৱৰ্ড সৃষ্টি কৰক' : 'Create Account Password'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="password"
                 required
                 value={regPassword}
                 onChange={(e) => setRegPassword(e.target.value)}
-                placeholder="Choose a secure password"
+                placeholder={lang === 'as' ? 'সুৰক্ষিত পাছৱৰ্ড বাছনি কৰক' : 'Choose a secure password'}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium"
               />
             </div>
@@ -344,7 +357,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Mobile / Phone No.
+                  {lang === 'as' ? 'ম’বাইল / ফোন নং' : 'Mobile / Phone No.'}
                 </label>
                 <input
                   type="tel"
@@ -357,7 +370,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Student Email
+                  {lang === 'as' ? 'ছাত্ৰ ইমেইল' : 'Student Email'}
                 </label>
                 <input
                   type="email"
@@ -374,7 +387,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               disabled={loading}
               className="w-full py-3 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-500 shadow-md transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50 mt-2"
             >
-              <span>{loading ? 'Verifying Admission...' : 'Verify Admission & Create Student ID'}</span>
+              <span>{loading ? (lang === 'as' ? 'সত্যাপন কৰা হৈছে...' : 'Verifying Admission...') : (lang === 'as' ? 'নামভৰ্তি পৰীক্ষা কৰি আইডি সৃষ্টি কৰক' : 'Verify Admission & Create Student ID')}</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </button>
           </form>
@@ -385,16 +398,16 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           <form onSubmit={handleForgotPassword} className="space-y-3.5 text-xs">
             
             <div className="p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-[11px] text-slate-600">
-              {activeRole === 'admin' && 'Admin Recovery: Enter the official university administration email address.'}
-              {activeRole === 'worker' && 'Worker Recovery: Enter your assigned Worker ID and registered mobile number.'}
-              {activeRole === 'student' && 'Student Recovery: Enter your unique Admission Roll No. and registered mobile number.'}
+              {activeRole === 'admin' && (lang === 'as' ? 'প্ৰশাসক পুনৰুদ্ধাৰ: চৰকাৰী বিশ্ববিদ্যালয় প্ৰশাসন ইমেইল দিয়ক।' : 'Admin Recovery: Enter the official university administration email address.')}
+              {activeRole === 'worker' && (lang === 'as' ? 'কৰ্মী পুনৰুদ্ধাৰ: আপোনাৰ কৰ্মী পৰিচয় নম্বৰ আৰু পঞ্জীভুক্ত ম’বাইল নম্বৰ দিয়ক।' : 'Worker Recovery: Enter your assigned Worker ID and registered mobile number.')}
+              {activeRole === 'student' && (lang === 'as' ? 'ছাত্ৰ পুনৰুদ্ধাৰ: আপোনাৰ নামভৰ্তি ৰোল নম্বৰ আৰু পঞ্জীভুক্ত ম’বাইল নম্বৰ দিয়ক।' : 'Student Recovery: Enter your unique Admission Roll No. and registered mobile number.')}
             </div>
 
             {/* Admin Verification Field */}
             {activeRole === 'admin' && (
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Official Campus Administrative Email
+                  {lang === 'as' ? 'চৰকাৰী বিশ্ববিদ্যালয় প্ৰশাসন ইমেইল' : 'Official Campus Administrative Email'}
                 </label>
                 <input
                   type="email"
@@ -412,7 +425,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Worker ID
+                    {lang === 'as' ? 'কৰ্মী পৰিচয় নম্বৰ' : 'Worker ID'}
                   </label>
                   <input
                     type="text"
@@ -425,7 +438,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Registered Mobile No.
+                    {lang === 'as' ? 'পঞ্জীভুক্ত ম’বাইল নং' : 'Registered Mobile No.'}
                   </label>
                   <input
                     type="tel"
@@ -444,7 +457,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Admission Roll No.
+                    {lang === 'as' ? 'নামভৰ্তি ৰোল নং' : 'Admission Roll No.'}
                   </label>
                   <input
                     type="text"
@@ -457,7 +470,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Registered Mobile No.
+                    {lang === 'as' ? 'পঞ্জীভুক্ত ম’বাইল নং' : 'Registered Mobile No.'}
                   </label>
                   <input
                     type="tel"
@@ -474,14 +487,14 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             {/* New Password */}
             <div>
               <label className="block font-bold text-slate-700 mb-1">
-                Enter New Password <span className="text-rose-500">*</span>
+                {lang === 'as' ? 'নতুন পাছৱৰ্ড প্ৰৱিষ্ট কৰক' : 'Enter New Password'} <span className="text-rose-500">*</span>
               </label>
               <input
                 type="password"
                 required
                 value={newPassword}
                 onChange={(e) => setNewPassword(e.target.value)}
-                placeholder="Minimum 4 characters"
+                placeholder={lang === 'as' ? 'নূন্যতম ৪ টা আখৰ' : 'Minimum 4 characters'}
                 className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium"
               />
             </div>
@@ -491,7 +504,7 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
               disabled={loading}
               className="w-full py-3 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 shadow-md transition-all flex items-center justify-center space-x-1.5 disabled:opacity-50"
             >
-              <span>{loading ? 'Verifying & Updating...' : 'Reset Password'}</span>
+              <span>{loading ? (lang === 'as' ? 'যাচাই কৰি আপডেট কৰা হৈছে...' : 'Verifying & Updating...') : (lang === 'as' ? 'পাছৱৰ্ড সলনি কৰক' : 'Reset Password')}</span>
             </button>
           </form>
         )}

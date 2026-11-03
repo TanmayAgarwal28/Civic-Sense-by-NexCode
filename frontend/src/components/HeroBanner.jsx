@@ -5,6 +5,11 @@ import { Activity, CheckCircle2, Clock, Wrench, ShieldAlert, Users, Sparkles } f
 export function HeroBanner({ stats = {} }) {
   const { lang, t } = useLanguage();
 
+  const liveSla = typeof stats.slaComplianceRate === 'number'
+    ? stats.slaComplianceRate
+    : (stats.total > 0 ? Math.round(((stats.resolved || 0) / stats.total) * 100) : 100);
+  const healthOffset = 138 * (1 - Math.min(100, Math.max(0, liveSla)) / 100);
+
   return (
     <div className="bg-gradient-to-b from-slate-900 to-slate-800 text-white pt-6 pb-8 border-b border-slate-700/60 shadow-inner">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -31,17 +36,32 @@ export function HeroBanner({ stats = {} }) {
             <div className="relative flex items-center justify-center">
               <svg className="w-14 h-14 transform -rotate-90">
                 <circle cx="28" cy="28" r="22" stroke="currentColor" strokeWidth="4" className="text-slate-700" fill="transparent" />
-                <circle cx="28" cy="28" r="22" stroke="currentColor" strokeWidth="4" className="text-emerald-500" strokeDasharray={138} strokeDashoffset={138 * (1 - 0.94)} strokeLinecap="round" fill="transparent" />
+                <circle 
+                  cx="28" 
+                  cy="28" 
+                  r="22" 
+                  stroke="currentColor" 
+                  strokeWidth="4" 
+                  className={liveSla >= 85 ? "text-emerald-500" : liveSla >= 60 ? "text-amber-500" : "text-rose-500"} 
+                  strokeDasharray={138} 
+                  strokeDashoffset={healthOffset} 
+                  strokeLinecap="round" 
+                  fill="transparent" 
+                />
               </svg>
-              <span className="absolute text-xs font-bold text-emerald-400">94%</span>
+              <span className={`absolute text-xs font-bold ${liveSla >= 85 ? 'text-emerald-400' : liveSla >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>
+                {liveSla}%
+              </span>
             </div>
             <div>
               <div className="text-xs text-slate-400 font-medium">{t('campusHealthScore')}</div>
               <div className="text-sm font-bold text-white flex items-center space-x-1">
-                <span>{t('operational')}</span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+                <span>{liveSla >= 75 ? t('operational') : (lang === 'as' ? 'তদাৰকী প্ৰয়োজন' : 'Attention Needed')}</span>
+                <span className={`w-2 h-2 rounded-full ${liveSla >= 85 ? 'bg-emerald-400' : liveSla >= 60 ? 'bg-amber-400' : 'bg-rose-400'}`}></span>
               </div>
-              <div className="text-[11px] text-slate-400">SLA: {stats.slaComplianceRate || 95}% on target</div>
+              <div className="text-[11px] text-slate-400">
+                {t('slaTargetLabel') || 'SLA Target'}: <span className="font-bold text-white">{liveSla}%</span> {t('slaOnTarget') || 'compliance'}
+              </div>
             </div>
           </div>
         </div>

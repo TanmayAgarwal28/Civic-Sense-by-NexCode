@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { 
   X, MapPin, Clock, ThumbsUp, ShieldAlert, CheckCircle2, 
-  FileText, Sparkles, User, Calendar, ExternalLink, Star 
+  FileText, Sparkles, User, Calendar, ExternalLink, Star, Languages 
 } from 'lucide-react';
 
 export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
@@ -10,9 +11,11 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
   const [rating, setRating] = useState(issue?.rating || 0);
   const [hasRated, setHasRated] = useState(false);
   const [activeSummaryTab, setActiveSummaryTab] = useState(lang === 'as' ? 'as' : 'en');
+  const [langMode, setLangMode] = useState('both'); // 'both' | 'en' | 'as'
 
   if (!isOpen || !issue) return null;
 
+  const bi = getIssueBilingual(issue);
   const isResolved = issue.status === 'resolved' || issue.status === 'closed';
 
   const handleRate = (star) => {
@@ -26,7 +29,7 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
         
         {/* Modal Top Header */}
         <div className="sticky top-0 bg-slate-900 text-white p-5 rounded-t-3xl z-10 flex items-start justify-between border-b border-slate-800">
-          <div>
+          <div className="flex-1 pr-3">
             <div className="flex flex-wrap items-center gap-2 mb-1.5">
               <span className="font-mono text-xs font-extrabold text-emerald-400 bg-emerald-950/80 px-2.5 py-0.5 rounded border border-emerald-800">
                 #{issue.ticketId}
@@ -41,11 +44,69 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
               <span className="px-2 py-0.5 rounded-full text-[10px] bg-slate-800 text-slate-300 border border-slate-700">
                 SLA: {issue.slaHours || 24} Hours
               </span>
+
+              {/* Language Display Mode Toggle */}
+              <div className="ml-auto flex items-center bg-slate-800/90 p-0.5 rounded-xl border border-slate-700">
+                <button
+                  type="button"
+                  onClick={() => setLangMode('both')}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                    langMode === 'both' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                  title="View both English and Assamese"
+                >
+                  {lang === 'as' ? 'দুয়োটা (Both)' : 'Both (EN+AS)'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLangMode('en')}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                    langMode === 'en' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  EN
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLangMode('as')}
+                  className={`px-2 py-0.5 rounded-lg text-[10px] font-bold transition-all ${
+                    langMode === 'as' ? 'bg-emerald-600 text-white shadow-xs' : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  অসমীয়া
+                </button>
+              </div>
             </div>
 
-            <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug font-assamese">
-              {issue.title}
-            </h3>
+            {/* Bilingual or Single Title */}
+            {langMode === 'both' ? (
+              <div className="space-y-1.5 mt-2 mb-1">
+                <div className="flex items-start gap-1.5">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-emerald-500/30 text-emerald-300 border border-emerald-500/40 uppercase shrink-0 mt-0.5">
+                    EN
+                  </span>
+                  <h3 className="text-base sm:text-lg font-bold text-white leading-snug">
+                    {bi.titleEn}
+                  </h3>
+                </div>
+                <div className="flex items-start gap-1.5">
+                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-500/30 text-amber-300 border border-amber-500/40 uppercase shrink-0 mt-0.5 font-assamese">
+                    অসমীয়া
+                  </span>
+                  <h3 className="text-sm sm:text-base font-semibold text-slate-200 leading-snug font-assamese">
+                    {bi.titleAs}
+                  </h3>
+                </div>
+              </div>
+            ) : langMode === 'en' ? (
+              <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug mt-1">
+                {bi.titleEn}
+              </h3>
+            ) : (
+              <h3 className="text-lg sm:text-xl font-extrabold text-white leading-snug font-assamese mt-1">
+                {bi.titleAs}
+              </h3>
+            )}
 
             <div className="flex flex-wrap items-center gap-3 text-xs text-slate-400 mt-2">
               <span className="flex items-center">
@@ -95,7 +156,7 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
 
           {/* Original Complaint Text & Reporter Meta */}
           <div className="bg-slate-50 border border-slate-200 rounded-2xl p-4 sm:p-5">
-            <div className="flex items-center justify-between text-xs text-slate-500 mb-2">
+            <div className="flex items-center justify-between text-xs text-slate-500 mb-3 pb-2 border-b border-slate-200/80">
               <span className="font-bold text-slate-700 flex items-center">
                 <User className="w-3.5 h-3.5 mr-1 text-slate-400" />
                 {issue.reporterName || t('anonymousUser')} ({issue.reporterRole || 'student'})
@@ -105,9 +166,38 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                 {new Date(issue.createdAt).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
               </span>
             </div>
-            <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-assamese">
-              {issue.description}
-            </p>
+
+            {/* Bilingual or Single Description Display */}
+            {langMode === 'both' ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-white rounded-xl border border-slate-200/80 shadow-2xs">
+                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1">
+                    <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">EN</span>
+                    <span>English Statement</span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed whitespace-pre-wrap">
+                    {bi.descriptionEn}
+                  </p>
+                </div>
+                <div className="p-3 bg-amber-50/70 rounded-xl border border-amber-200/80 shadow-2xs font-assamese">
+                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1">
+                    <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">অসমীয়া</span>
+                    <span>অসমীয়া অভিযোগ বিৱৰণ</span>
+                  </div>
+                  <p className="text-xs sm:text-sm text-slate-800 leading-relaxed font-assamese whitespace-pre-wrap">
+                    {bi.descriptionAs}
+                  </p>
+                </div>
+              </div>
+            ) : langMode === 'en' ? (
+              <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed">
+                {bi.descriptionEn}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-800 whitespace-pre-wrap leading-relaxed font-assamese">
+                {bi.descriptionAs}
+              </p>
+            )}
           </div>
 
           {/* Evidence Photos (Multimodal Inspection) */}

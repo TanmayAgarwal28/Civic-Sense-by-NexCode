@@ -7,6 +7,7 @@ import { findDuplicateIssues } from '../ai/duplicateDetector.js';
 import { generateBilingualSummary } from '../ai/summarizer.js';
 import { analyzeCampusImage } from '../ai/visionAnalyzer.js';
 import { isAssamese } from '../ai/assameseNlp.js';
+import { autoTranslateComplaint } from '../ai/translator.js';
 
 const router = express.Router();
 const upload = multer({ dest: CONFIG.UPLOADS_DIR });
@@ -117,7 +118,15 @@ router.post('/', upload.single('image'), async (req, res) => {
       });
     }
 
-    // 4. Bilingual Summary
+    // 4. Bilingual Translation (Automatic for both English & Assamese)
+    const translations = await autoTranslateComplaint({
+      title,
+      description,
+      category: classification.category,
+      location: location || ''
+    });
+
+    // 5. Bilingual Summary
     const summary = generateBilingualSummary({
       title,
       description,
@@ -128,7 +137,7 @@ router.post('/', upload.single('image'), async (req, res) => {
       isCompoundHazard: classification.isCompoundHazard
     });
 
-    // 5. Check AI Dispatch Setting
+    // 6. Check AI Dispatch Setting
     const settings = getSettings();
     const isDirectAutoDispatch = settings.aiAutoDispatch !== false;
 
@@ -145,10 +154,15 @@ router.post('/', upload.single('image'), async (req, res) => {
     const status = isDirectAutoDispatch ? 'assigned' : 'reported';
     const adminApprovalStatus = isDirectAutoDispatch ? 'approved_dispatched' : 'pending_approval';
 
-    // 6. Store in persistent database
+    // 7. Store in persistent database with dual language copies
     const created = createIssue({
       title,
       description,
+      titleEn: translations.titleEn || title,
+      titleAs: translations.titleAs || title,
+      descriptionEn: translations.descriptionEn || description,
+      descriptionAs: translations.descriptionAs || description,
+      originalLanguage: translations.originalLanguage || detectedLang,
       address,
       language: detectedLang,
       location: location || 'Campus',

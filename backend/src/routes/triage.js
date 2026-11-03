@@ -5,6 +5,7 @@ import { classifyComplaint } from '../ai/classifier.js';
 import { findDuplicateIssues } from '../ai/duplicateDetector.js';
 import { generateBilingualSummary } from '../ai/summarizer.js';
 import { analyzeCampusImage } from '../ai/visionAnalyzer.js';
+import { autoTranslateComplaint } from '../ai/translator.js';
 import { getAllIssues } from '../db/database.js';
 
 const router = express.Router();
@@ -25,7 +26,15 @@ router.post('/analyze', upload.single('image'), async (req, res) => {
     // 2. Bilingual Classification & Urgency Assessment
     const classification = classifyComplaint(`${title} ${description}`, imageAnalysis, category);
 
-    // 3. Bilingual Summary & Action Protocol
+    // 3. Real-Time Bilingual Translation (English & Assamese)
+    const translations = await autoTranslateComplaint({
+      title,
+      description,
+      category: classification.category,
+      location: location || ''
+    });
+
+    // 4. Bilingual Summary & Action Protocol
     const summary = generateBilingualSummary({
       title,
       description,
@@ -36,7 +45,7 @@ router.post('/analyze', upload.single('image'), async (req, res) => {
       isCompoundHazard: classification.isCompoundHazard
     });
 
-    // 4. Semantic Duplicate Detection against active complaints
+    // 5. Semantic Duplicate Detection against active complaints
     const existingIssues = getAllIssues();
     const duplicateResults = findDuplicateIssues({
       id: 'draft',
@@ -50,6 +59,7 @@ router.post('/analyze', upload.single('image'), async (req, res) => {
       success: true,
       data: {
         classification,
+        translations,
         summary,
         duplicates: duplicateResults,
         vision: imageAnalysis

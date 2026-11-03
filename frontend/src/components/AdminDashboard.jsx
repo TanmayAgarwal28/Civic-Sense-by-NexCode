@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { 
   updateIssueStatus, 
   generateOfficialNotice, 
@@ -38,6 +39,12 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
   const { lang, t } = useLanguage();
 
   const [activeAdminTab, setActiveAdminTab] = useState(initialAdminTab); // 'triage', 'users', 'categories', 'settings', 'database'
+
+  useEffect(() => {
+    if (initialAdminTab) {
+      setActiveAdminTab(initialAdminTab);
+    }
+  }, [initialAdminTab]);
 
   // Issues and Status update modal
   const [selectedIssue, setSelectedIssue] = useState(null);
@@ -685,27 +692,76 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
   };
 
   const handleExportCsv = () => {
-    if (!issues || issues.length === 0) return;
-    const headers = ['Ticket ID', 'Title', 'Address', 'Category', 'Priority', 'Status', 'Location', 'Reporter', 'SLA Hours', 'Created At'];
-    const rows = issues.map(i => [
-      i.ticketId,
-      `"${(i.title || '').replace(/"/g, '""')}"`,
-      `"${(i.address || '').replace(/"/g, '""')}"`,
-      i.category,
-      i.priority,
-      i.status,
-      `"${(i.location || '').replace(/"/g, '""')}"`,
-      i.reporterName || 'Anonymous',
+    const listToExport = (issues && issues.length > 0)
+      ? issues
+      : (rawDbData?.issues && rawDbData.issues.length > 0 ? rawDbData.issues : []);
+
+    if (listToExport.length === 0) {
+      showToast(lang === 'as' ? 'ৰপ্তানি কৰিবলৈ কোনো অভিযোগ পোৱা নগ’ল।' : 'No grievances available to export.');
+      return;
+    }
+
+    const headers = [
+      'Ticket ID',
+      'Title',
+      'Specific Address',
+      'Campus Zone',
+      'Category',
+      'Priority',
+      'SLA Hours',
+      'Status',
+      'Reporter Name',
+      'Reporter Roll',
+      'Assigned Technician',
+      'Upvotes',
+      'Created Date',
+      'Resolution Notes'
+    ];
+
+    const rows = listToExport.map(i => [
+      i.ticketId || i.id || 'N/A',
+      `"${(i.title || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`,
+      `"${(i.address || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`,
+      `"${(i.location || i.zoneId || '').replace(/"/g, '""')}"`,
+      `"${(i.categoryName || i.category || '').replace(/"/g, '""')}"`,
+      (i.priority || 'medium').toUpperCase(),
       i.slaHours || 24,
-      i.createdAt
+      (i.status || 'reported').toUpperCase(),
+      `"${(i.reporterName || 'Anonymous Student').replace(/"/g, '""')}"`,
+      i.reporterRoll || 'N/A',
+      `"${(i.assignedWorkerName || i.assignedWorkerId || 'Unassigned').replace(/"/g, '""')}"`,
+      i.upvotes || 0,
+      i.createdAt ? new Date(i.createdAt).toLocaleString() : 'N/A',
+      `"${(i.resolutionNotes || '').replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`
     ]);
-    const csvContent = 'data:text/csv;charset=utf-8,\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+
+    const csvContent = '\uFEFF' + [headers.join(','), ...rows.map(r => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodeURI(csvContent));
-    link.setAttribute('download', `CivicSense_Ledger_${new Date().toISOString().slice(0, 10)}.csv`);
+    link.href = url;
+    link.setAttribute('download', `CivicSense_Campus_Grievances_${new Date().toISOString().slice(0, 10)}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast(lang === 'as' ? '✅ CSV প্ৰতিবেদন সফলতাৰে ডাউনলোড হ’ল!' : '✅ CSV Grievance Report downloaded successfully!');
+  };
+
+  const handleExportJson = () => {
+    const dataToExport = rawDbData || { issues, users: userData };
+    const blob = new Blob([JSON.stringify(dataToExport, null, 2)], { type: 'application/json;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `CivicSense_Database_Backup_${new Date().toISOString().slice(0, 10)}.json`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showToast(lang === 'as' ? '✅ JSON তথ্যভঁৰাল সফলতাৰে সংৰক্ষিত হ’ল!' : '✅ JSON Database export completed successfully!');
   };
 
   const handleResetData = async () => {
@@ -715,7 +771,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       message: lang === 'as' ? 'আপুনি সকলো তথ্য ডেমো অৱস্থালৈ পুনৰ সংস্থাপন কৰিবলৈ নিশ্চিতনে?' : 'Are you sure you want to reset all campus grievances and users to original demo state?',
       confirmText: lang === 'as' ? 'পুনৰ সংস্থাপন' : 'Reset Demo Data',
       onConfirm: async () => {
-        showToast('Database reset to pristine demo state.');
+        showToast(lang === 'as' ? 'তথ্যভঁৰাল ডেমো অৱস্থালৈ পুনৰ সংস্থাপন কৰা হ’ল।' : 'Database reset to pristine demo state.');
         try {
           await resetDemoData();
         } catch (err) {}
@@ -724,6 +780,34 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       }
     });
   };
+
+  // Live dynamic SLA Calculation directly from live tickets
+  const liveSlaMetrics = (() => {
+    const list = (issues && issues.length > 0) ? issues : (rawDbData?.issues || []);
+    if (list.length === 0) return { rate: 100, onTime: 0, breached: 0, total: 0 };
+    const now = Date.now();
+    let onTime = 0;
+    let breached = 0;
+
+    list.forEach(i => {
+      const created = i.createdAt ? new Date(i.createdAt).getTime() : now;
+      const slaHours = Number(i.slaHours) || (i.priority === 'critical' ? 2 : i.priority === 'high' ? 6 : i.priority === 'low' ? 48 : 24);
+      const deadline = i.slaDeadline ? new Date(i.slaDeadline).getTime() : created + (slaHours * 3600 * 1000);
+
+      if (i.status === 'resolved' || i.status === 'closed') {
+        const resTime = i.resolvedAt ? new Date(i.resolvedAt).getTime() : (created + (slaHours * 0.4 * 3600 * 1000));
+        if (resTime <= deadline) onTime++;
+        else breached++;
+      } else if (now > deadline) {
+        breached++;
+      } else {
+        onTime++;
+      }
+    });
+
+    const rate = Math.round((onTime / list.length) * 100);
+    return { rate, onTime, breached, total: list.length };
+  })();
 
   const filteredIssues = issues.filter(i => {
     if (statusFilter === 'all') return true;
@@ -742,24 +826,26 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       )}
 
       {/* Top Banner */}
-      <div className="bg-slate-900 text-white rounded-3xl p-6 border border-slate-800 shadow-xl">
+      <div className="bg-slate-900 text-white rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-xl space-y-5">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="flex items-center space-x-3.5">
-            <div className="p-3 bg-indigo-600/30 text-indigo-400 rounded-2xl border border-indigo-500/30">
+          <div className="flex items-start space-x-3.5">
+            <div className="p-3 bg-indigo-600/30 text-indigo-400 rounded-2xl border border-indigo-500/30 flex-shrink-0">
               <ShieldCheck className="w-6 h-6" />
             </div>
             <div>
-              <div className="flex items-center space-x-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/40 uppercase">
-                  Super Administrator Portal
+                  {t('adminPortalBadge')}
                 </span>
-                <span className="text-xs text-slate-400">Master Administrative Access</span>
+                <span className="text-xs text-slate-400">
+                  {t('adminAccessBadge')}
+                </span>
               </div>
-              <h3 className="text-xl font-extrabold text-white mt-0.5">
+              <h3 className="text-xl font-extrabold text-white mt-1">
                 {t('adminHeading')}
               </h3>
-              <p className="text-xs text-slate-300">
-                Full authority over user permissions, worker credentials, dynamic categories, and raw database.
+              <p className="text-xs text-slate-300 mt-0.5 leading-relaxed">
+                {t('adminDescription')}
               </p>
             </div>
           </div>
@@ -767,14 +853,24 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           <div className="flex flex-wrap items-center gap-2">
             <button
               onClick={handleExportCsv}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700"
+              title="Download CSV Spreadsheet of all grievances"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-all cursor-pointer shadow-sm"
             >
               <Download className="w-3.5 h-3.5 text-emerald-400" />
               <span>{t('exportCsvBtn')}</span>
             </button>
             <button
+              onClick={handleExportJson}
+              title="Download full JSON database snapshot"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-all cursor-pointer shadow-sm"
+            >
+              <Database className="w-3.5 h-3.5 text-cyan-400" />
+              <span>{t('dbExportJson')}</span>
+            </button>
+            <button
               onClick={handleResetData}
-              className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800"
+              title="Reset data back to initial state"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-rose-950/80 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer shadow-sm"
             >
               <RefreshCw className="w-3.5 h-3.5" />
               <span>{t('resetDemoDataBtn')}</span>
@@ -782,56 +878,108 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           </div>
         </div>
 
+        {/* Live SLA Target Monitor Widget */}
+        <div className="bg-slate-950/70 rounded-2xl p-4 border border-slate-800/80 flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+          <div className="flex items-center space-x-4">
+            <div className="relative flex items-center justify-center flex-shrink-0">
+              <svg className="w-14 h-14 transform -rotate-90">
+                <circle cx="28" cy="28" r="22" stroke="currentColor" strokeWidth="4" className="text-slate-800" fill="transparent" />
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="22"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                  className={liveSlaMetrics.rate >= 85 ? "text-emerald-500" : liveSlaMetrics.rate >= 60 ? "text-amber-500" : "text-rose-500"}
+                  strokeDasharray={138}
+                  strokeDashoffset={138 * (1 - Math.min(100, Math.max(0, liveSlaMetrics.rate)) / 100)}
+                  strokeLinecap="round"
+                  fill="transparent"
+                />
+              </svg>
+              <span className={`absolute text-xs font-extrabold ${liveSlaMetrics.rate >= 85 ? 'text-emerald-400' : liveSlaMetrics.rate >= 60 ? 'text-amber-400' : 'text-rose-400'}`}>
+                {liveSlaMetrics.rate}%
+              </span>
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="text-xs font-bold text-slate-300">{t('slaTargetLabel')}</span>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  liveSlaMetrics.rate >= 85 ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                }`}>
+                  {liveSlaMetrics.rate >= 85 ? (lang === 'as' ? 'উত্তম স্থিতি' : 'Optimal Target') : (lang === 'as' ? 'তদাৰকী প্ৰয়োজন' : 'Attention Needed')}
+                </span>
+              </div>
+              <div className="text-xs text-slate-400 mt-1 flex flex-wrap items-center gap-x-3 gap-y-1">
+                <span>{t('slaOnTime')}: <strong className="text-emerald-400 font-mono">{liveSlaMetrics.onTime}</strong></span>
+                <span>•</span>
+                <span>{t('slaBreached')}: <strong className="text-rose-400 font-mono">{liveSlaMetrics.breached}</strong></span>
+                <span>•</span>
+                <span>{lang === 'as' ? 'মুঠ মূল্যাঙ্কিত' : 'Total Evaluated'}: <strong className="text-white font-mono">{liveSlaMetrics.total}</strong></span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-[11px] text-slate-400 bg-slate-900/80 px-3.5 py-2.5 rounded-xl border border-slate-800 flex items-center space-x-2">
+            <Clock className="w-4 h-4 text-emerald-400 flex-shrink-0" />
+            <span>
+              {lang === 'as'
+                ? 'প্ৰত্যেক অভিযোগৰ নিৰ্ধাৰিত সময়সীমা (২ ঘণ্টা / ৬ ঘণ্টা / ২৪ ঘণ্টা) অনুসৰি পোনপটীয়াকৈ গণনা কৰা হৈছে।'
+                : 'Live calculation updated automatically against dynamic SLA deadlines (2h / 6h / 24h).'}
+            </span>
+          </div>
+        </div>
+
         {/* Admin Navigation Tabs - Horizontally scrollable on mobile */}
-        <div className="flex items-center gap-2 mt-5 pt-4 border-t border-slate-800 text-xs overflow-x-auto pb-1 scrollbar-none flex-nowrap">
+        <div className="flex items-center gap-2 pt-3 border-t border-slate-800 text-xs overflow-x-auto pb-1 scrollbar-thin flex-nowrap">
           <button
             onClick={() => setActiveAdminTab('triage')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center space-x-1.5 ${
-              activeAdminTab === 'triage' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap cursor-pointer flex-shrink-0 ${
+              activeAdminTab === 'triage' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>Grievances & Work Orders ({issues.length})</span>
+            <span>{t('adminTabTriage')} ({issues.length})</span>
           </button>
 
           <button
             onClick={() => setActiveAdminTab('users')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center space-x-1.5 ${
-              activeAdminTab === 'users' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap cursor-pointer flex-shrink-0 ${
+              activeAdminTab === 'users' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             <Users className="w-3.5 h-3.5" />
-            <span>Student & Worker Management</span>
+            <span>{t('adminTabUsers')}</span>
           </button>
 
           <button
             onClick={() => setActiveAdminTab('categories')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center space-x-1.5 ${
-              activeAdminTab === 'categories' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap cursor-pointer flex-shrink-0 ${
+              activeAdminTab === 'categories' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             <MapPin className="w-3.5 h-3.5" />
-            <span>Dynamic Categories & Locations</span>
+            <span>{t('adminTabCategories')}</span>
           </button>
 
           <button
             onClick={() => setActiveAdminTab('settings')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center space-x-1.5 ${
-              activeAdminTab === 'settings' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap cursor-pointer flex-shrink-0 ${
+              activeAdminTab === 'settings' ? 'bg-indigo-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             <SettingsIcon className="w-3.5 h-3.5" />
-            <span>AI Dispatch Policy Setting</span>
+            <span>{t('adminTabSettings')}</span>
           </button>
 
           <button
             onClick={() => setActiveAdminTab('database')}
-            className={`px-3.5 py-1.5 rounded-xl font-bold transition-all flex items-center space-x-1.5 ${
-              activeAdminTab === 'database' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+            className={`px-3.5 py-2 rounded-xl font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap cursor-pointer flex-shrink-0 ${
+              activeAdminTab === 'database' ? 'bg-emerald-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
             }`}
           >
             <Database className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Live Database Viewer</span>
+            <span>{t('adminTabDatabase')}</span>
           </button>
         </div>
 
@@ -844,132 +992,153 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           <div className="p-4 sm:p-5 border-b border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center space-x-2">
               <h4 className="font-extrabold text-slate-800 text-sm">
-                Campus Work Orders & Dispatches
+                {lang === 'as' ? 'চৌহদৰ কাৰ্য্যসূচী আৰু বিভাগীয় দায়িত্ব' : 'Campus Work Orders & Dispatches'}
               </h4>
-              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800">
+              <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-indigo-100 text-indigo-800 font-mono">
                 {filteredIssues.length}
               </span>
             </div>
 
-            <div className="flex items-center space-x-2 text-xs">
-              <Filter className="w-3.5 h-3.5 text-slate-400" />
+            <div className="flex items-center space-x-2 text-xs w-full sm:w-auto justify-between sm:justify-end">
+              <div className="flex items-center space-x-1 text-slate-500 font-medium">
+                <Filter className="w-3.5 h-3.5 text-slate-400" />
+                <span>{lang === 'as' ? 'ফিল্টাৰ:' : 'Filter:'}</span>
+              </div>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold"
+                className="px-2.5 py-1.5 rounded-lg border border-slate-300 text-xs font-semibold bg-white text-slate-700 cursor-pointer"
               >
-                <option value="all">All Statuses</option>
-                <option value="reported">Reported (নথিভুক্ত)</option>
-                <option value="assigned">Assigned to Crew</option>
-                <option value="in_progress">In Progress (কাম চলি থকা)</option>
-                <option value="resolved">Resolved & Verified</option>
+                <option value="all">{lang === 'as' ? 'সকলো স্থিতি (All Statuses)' : 'All Statuses'}</option>
+                <option value="reported">{lang === 'as' ? 'নথিভুক্ত (Reported)' : 'Reported'}</option>
+                <option value="in_progress">{lang === 'as' ? 'মেৰামতি চলি থকা (In Progress)' : 'In Progress'}</option>
+                <option value="resolved">{lang === 'as' ? 'সমাধান আৰু প্ৰমাণিত (Resolved)' : 'Resolved & Verified'}</option>
               </select>
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left text-xs min-w-[700px]">
               <thead className="bg-slate-50 text-slate-500 uppercase tracking-wider font-semibold border-b border-slate-200">
                 <tr>
-                  <th className="px-4 py-3">Ticket ID</th>
-                  <th className="px-4 py-3">Title & Specific Address</th>
-                  <th className="px-4 py-3">Department / Assigned</th>
-                  <th className="px-4 py-3">Priority / SLA</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3 text-right">Admin Actions</th>
+                  <th className="px-4 py-3">{lang === 'as' ? 'টিকট নম্বৰ' : 'Ticket ID'}</th>
+                  <th className="px-4 py-3">{lang === 'as' ? 'শিৰোনাম আৰু নিৰ্দিষ্ট স্থান' : 'Title & Specific Address'}</th>
+                  <th className="px-4 py-3">{lang === 'as' ? 'বিভাগ / কৰ্মী' : 'Department / Assigned'}</th>
+                  <th className="px-4 py-3">{lang === 'as' ? 'অগ্ৰাধিকাৰ / সময়সীমা' : 'Priority / SLA'}</th>
+                  <th className="px-4 py-3">{lang === 'as' ? 'স্থিতি' : 'Status'}</th>
+                  <th className="px-4 py-3 text-right">{lang === 'as' ? 'প্ৰশাসনিক ব্যৱস্থা' : 'Admin Actions'}</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 text-slate-700">
-                {filteredIssues.map((issue) => (
-                  <tr key={issue.id} className="hover:bg-slate-50 transition-colors">
-                    
-                    <td className="px-4 py-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
-                      #{issue.ticketId}
-                      {issue.language === 'as' && (
-                        <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] bg-slate-200 text-slate-700 font-sans font-bold">
-                          অসমীয়া
-                        </span>
-                      )}
+                {filteredIssues.length === 0 ? (
+                  <tr>
+                    <td colSpan="6" className="px-4 py-8 text-center text-slate-400 text-xs">
+                      {lang === 'as' ? 'কোনো কাৰ্য্যসূচী অথবা অভিযোগ পোৱা নগ’ল।' : 'No work orders or grievances found matching filter.'}
                     </td>
-
-                    <td className="px-4 py-3.5 max-w-xs sm:max-w-md">
-                      <div className="font-bold text-slate-900 line-clamp-1 font-assamese">
-                        {issue.title}
-                      </div>
-                      {issue.address && (
-                        <div className="text-[11px] text-amber-700 font-medium mt-0.5 flex items-center">
-                          <MapPin className="w-3 h-3 mr-1 text-amber-600 flex-shrink-0" />
-                          <span className="truncate">{issue.address}</span>
-                        </div>
-                      )}
-                      <div className="text-[10px] text-slate-400 mt-0.5">{issue.location}</div>
-                    </td>
-
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <div className="font-semibold text-indigo-700">
-                        {issue.department?.en || issue.category}
-                      </div>
-                      <div className="text-[11px] text-slate-500">
-                        {issue.assignedOfficer || 'Unassigned'}
-                      </div>
-                    </td>
-
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                        issue.priority === 'critical' ? 'bg-rose-100 text-rose-800' : 'bg-amber-100 text-amber-800'
-                      }`}>
-                        {issue.priority}
-                      </span>
-                      <span className="text-[11px] text-slate-400 ml-1">({issue.slaHours || 24}h)</span>
-                    </td>
-
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
-                        issue.status === 'resolved'
-                          ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                          : issue.status === 'in_progress'
-                          ? 'bg-amber-100 text-amber-800 border border-amber-300'
-                          : 'bg-slate-100 text-slate-700'
-                      }`}>
-                        {issue.status}
-                      </span>
-                    </td>
-
-                    <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-1.5">
-                      {issue.adminApprovalStatus === 'pending_approval' && (
-                        <button
-                          onClick={() => handleApproveDispatch(issue.id)}
-                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white"
-                        >
-                          Approve Dispatch
-                        </button>
-                      )}
-
-                      <button
-                        onClick={() => handleOpenStatusModal(issue)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white"
-                      >
-                        Update
-                      </button>
-
-                      <button
-                        onClick={() => handleGenerateNotice(issue)}
-                        className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300"
-                      >
-                        Notice
-                      </button>
-
-                      <button
-                        onClick={() => handleDeleteIssue(issue.id, issue.ticketId)}
-                        className="p-1 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors inline-flex items-center"
-                        title="Delete work order"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
-                    </td>
-
                   </tr>
-                ))}
+                ) : (
+                  filteredIssues.map((issue) => {
+                    const bi = getIssueBilingual(issue);
+                    return (
+                      <tr key={issue.id} className="hover:bg-slate-50 transition-colors">
+                        
+                        <td className="px-4 py-3.5 font-mono font-bold text-slate-900 whitespace-nowrap">
+                          #{issue.ticketId}
+                          <span className="ml-1.5 px-1.5 py-0.5 rounded text-[9px] bg-amber-100 text-amber-800 font-sans font-bold">
+                            EN+AS
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3.5 max-w-xs sm:max-w-md">
+                          <div className="space-y-1">
+                            <div className="flex items-start gap-1.5">
+                              <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-200 uppercase shrink-0 mt-0.5">EN</span>
+                              <span className="font-bold text-slate-900 line-clamp-1 text-xs">{bi.titleEn}</span>
+                            </div>
+                            <div className="flex items-start gap-1.5">
+                              <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-amber-100 text-amber-800 border border-amber-200 uppercase shrink-0 mt-0.5 font-assamese">অসমীয়া</span>
+                              <span className="font-semibold text-slate-700 line-clamp-1 text-xs font-assamese">{bi.titleAs}</span>
+                            </div>
+                          </div>
+                          {issue.address && (
+                            <div className="text-[11px] text-amber-700 font-medium mt-1 flex items-center">
+                              <MapPin className="w-3 h-3 mr-1 text-amber-600 flex-shrink-0" />
+                              <span className="truncate">{issue.address}</span>
+                            </div>
+                          )}
+                          <div className="text-[10px] text-slate-400 mt-0.5">{issue.location}</div>
+                        </td>
+
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <div className="font-semibold text-indigo-700">
+                          {typeof issue.department === 'object' 
+                            ? (lang === 'as' ? issue.department?.as || issue.department?.en : issue.department?.en)
+                            : (issue.department || issue.category)}
+                        </div>
+                        <div className="text-[11px] text-slate-500 font-mono">
+                          {issue.assignedWorkerName || issue.assignedOfficer || (lang === 'as' ? 'অনিৰ্ধাৰিত' : 'Unassigned')}
+                        </div>
+                      </td>
+
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                          issue.priority === 'critical' ? 'bg-rose-100 text-rose-800' : issue.priority === 'high' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {issue.priority}
+                        </span>
+                        <span className="text-[11px] text-slate-400 ml-1">({issue.slaHours || 24}h)</span>
+                      </td>
+
+                      <td className="px-4 py-3.5 whitespace-nowrap">
+                        <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                          issue.status === 'resolved'
+                            ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                            : issue.status === 'in_progress'
+                            ? 'bg-amber-100 text-amber-800 border border-amber-300'
+                            : 'bg-slate-100 text-slate-700'
+                        }`}>
+                          {issue.status === 'resolved' ? (lang === 'as' ? 'সমাধান সম্পন্ন' : 'Resolved') :
+                           issue.status === 'in_progress' ? (lang === 'as' ? 'কাম চলি আছে' : 'In Progress') :
+                           (lang === 'as' ? 'নথিভুক্ত' : 'Reported')}
+                        </span>
+                      </td>
+
+                      <td className="px-4 py-3.5 text-right whitespace-nowrap space-x-1.5">
+                        {issue.adminApprovalStatus === 'pending_approval' && (
+                          <button
+                            onClick={() => handleApproveDispatch(issue.id)}
+                            className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white cursor-pointer"
+                          >
+                            {lang === 'as' ? 'অনুমোদন' : 'Approve'}
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() => handleOpenStatusModal(issue)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer"
+                        >
+                          {lang === 'as' ? 'স্থিতি সলনি' : 'Update'}
+                        </button>
+
+                        <button
+                          onClick={() => handleGenerateNotice(issue)}
+                          className="px-2.5 py-1 rounded-lg text-xs font-bold bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 cursor-pointer"
+                        >
+                          {lang === 'as' ? 'চৰকাৰী জাননী' : 'Notice'}
+                        </button>
+
+                        <button
+                          onClick={() => handleDeleteIssue(issue.id, issue.ticketId)}
+                          className="p-1 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 transition-colors inline-flex items-center cursor-pointer"
+                          title="Delete work order"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </td>
+
+                    </tr>
+                  );
+                }))}
               </tbody>
             </table>
           </div>
@@ -983,54 +1152,54 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-2xl border border-slate-200">
             <div>
               <h4 className="font-extrabold text-slate-900 text-sm">
-                Campus User & Access Control Center
+                {lang === 'as' ? 'চৌহদ ব্যৱহাৰকাৰী আৰু প্ৰৱেশাধিকাৰ নিয়ন্ত্ৰণ কেন্দ্ৰ' : 'Campus User & Access Control Center'}
               </h4>
               <p className="text-xs text-slate-500">
-                Toggle student account access on/off, pre-approve admission numbers, and issue worker credentials.
+                {lang === 'as' ? 'ছাত্ৰ প্ৰৱেশ অনুমতি অন/অফ, নামভৰ্তিৰ ৰোল পৰীক্ষণ, আৰু কাৰিকৰী কৰ্মীৰ একাউণ্ট ব্যৱস্থাপনা।' : 'Toggle student account access on/off, pre-approve admission numbers, and issue worker credentials.'}
               </p>
             </div>
 
-            <div className="flex items-center space-x-2">
+            <div className="flex flex-wrap items-center gap-2">
               <button
                 onClick={() => setRosterModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center space-x-1"
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center space-x-1 cursor-pointer transition-all shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Add Admission Roll No.</span>
+                <span>{lang === 'as' ? '+ নামভৰ্তি ৰোল নম্বৰ যোগ' : '+ Add Admission Roll No.'}</span>
               </button>
 
               <button
                 onClick={() => setWorkerModalOpen(true)}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white flex items-center space-x-1"
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-500 text-white flex items-center space-x-1 cursor-pointer transition-all shadow-sm"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>+ Create Worker Account</span>
+                <span>{lang === 'as' ? '+ কৰ্মী একাউণ্ট যোগ' : '+ Create Worker Account'}</span>
               </button>
             </div>
           </div>
 
           {/* Administrator profile card */}
           <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 rounded-2xl p-4 sm:p-5 border border-indigo-700/60 shadow-lg text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="flex items-center space-x-3.5">
+            <div className="flex items-start sm:items-center space-x-3.5">
               <div className="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-xl flex-shrink-0">
                 🛡️
               </div>
               <div>
-                <div className="flex items-center space-x-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h4 className="font-extrabold text-white text-base">
-                    {userData.admin?.name || 'Chief Campus Administrator'}
+                    {userData.admin?.name || (lang === 'as' ? 'মুখ্য প্ৰশাসক' : 'Chief Campus Administrator')}
                   </h4>
                   <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-300 border border-indigo-500/40">
-                    Master Administrator Profile
+                    {t('adminMasterProfile')}
                   </span>
                 </div>
-                <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-indigo-200">
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1.5 text-xs text-indigo-200">
                   <div>
-                    Admin Login ID: <code className="bg-indigo-950 px-2 py-0.5 rounded border border-indigo-700/60 font-mono font-bold text-amber-300">{userData.admin?.username || 'CampusAdminX1'}</code>
+                    {t('adminLoginId')}: <code className="bg-indigo-950 px-2 py-0.5 rounded border border-indigo-700/60 font-mono font-bold text-amber-300">{userData.admin?.username || 'CampusAdminX1'}</code>
                   </div>
                   <span>•</span>
                   <div>
-                    Password: <span className="font-mono text-indigo-300">•••••••• (Fully Editable)</span>
+                    {t('adminPasswordLabel')}: <span className="font-mono text-indigo-300">•••••••• ({t('adminEditableBadge')})</span>
                   </div>
                   <span>•</span>
                   <div className="text-slate-300">
@@ -1046,29 +1215,28 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/40 flex items-center space-x-1.5 cursor-pointer transition-all"
               >
                 <Edit3 className="w-3.5 h-3.5 text-indigo-200" />
-                <span>Edit Admin ID & Password</span>
+                <span>{t('editAdminBtn')}</span>
               </button>
-
             </div>
           </div>
 
           {/* Student List with Edit, ON/OFF Switch & Delete */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center justify-between">
-              <span>Registered Students ({userData.students.length})</span>
-              <span className="text-[11px] text-slate-400 font-normal">Full control: Edit profiles, toggle access ON/OFF, or permanently delete accounts</span>
+            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <span>{t('regStudentsHeading')} ({userData.students.length})</span>
+              <span className="text-[11px] text-slate-400 font-normal">{t('regStudentsSubheading')}</span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left text-xs min-w-[650px]">
                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-2.5">Roll No. / ID</th>
-                    <th className="px-4 py-2.5">Student Name</th>
-                    <th className="px-4 py-2.5">Department</th>
-                    <th className="px-4 py-2.5">Phone</th>
-                    <th className="px-4 py-2.5">Status</th>
-                    <th className="px-4 py-2.5 text-right">Actions</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'ৰোল নং / আইডি' : 'Roll No. / ID'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'ছাত্ৰৰ নাম' : 'Student Name'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'বিভাগ' : 'Department'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'ফোন' : 'Phone'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'স্থিতি' : 'Status'}</th>
+                    <th className="px-4 py-2.5 text-right">{lang === 'as' ? 'কাৰ্য্যকলাপ' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1076,13 +1244,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                     <tr key={stu.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-mono font-bold text-slate-900">{stu.rollNo || stu.username}</td>
                       <td className="px-4 py-3 font-semibold text-slate-800">{stu.name}</td>
-                      <td className="px-4 py-3">{stu.department || 'General'}</td>
+                      <td className="px-4 py-3">{stu.department || (lang === 'as' ? 'সাধাৰণ' : 'General')}</td>
                       <td className="px-4 py-3">{stu.phone || '—'}</td>
                       <td className="px-4 py-3">
                         <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                           stu.isActive !== false ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'
                         }`}>
-                          {stu.isActive !== false ? 'Active' : 'Suspended'}
+                          {stu.isActive !== false ? (lang === 'as' ? 'সক্ৰিয়' : 'Active') : (lang === 'as' ? 'স্থগিত' : 'Suspended')}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -1094,7 +1262,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="p-1.5 rounded-lg text-indigo-700 hover:bg-indigo-50 border border-indigo-200 transition-all cursor-pointer flex items-center space-x-1"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline text-[11px] font-bold">Edit</span>
+                            <span className="hidden sm:inline text-[11px] font-bold">{lang === 'as' ? 'সম্পাদনা' : 'Edit'}</span>
                           </button>
 
                           {/* Access Switch */}
@@ -1110,12 +1278,12 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             {stu.isActive !== false ? (
                               <>
                                 <ToggleRight className="w-3.5 h-3.5" />
-                                <span>ON</span>
+                                <span>{lang === 'as' ? 'অন' : 'ON'}</span>
                               </>
                             ) : (
                               <>
                                 <ToggleLeft className="w-3.5 h-3.5" />
-                                <span>OFF</span>
+                                <span>{lang === 'as' ? 'বন্ধ' : 'OFF'}</span>
                               </>
                             )}
                           </button>
@@ -1139,21 +1307,21 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
           {/* Workers List with Edit & Delete */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center justify-between">
-              <span>Campus Maintenance Workers & Technicians ({userData.workers.length})</span>
-              <span className="text-[11px] text-slate-400 font-normal">Edit worker profile details or delete technician accounts</span>
+            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <span>{t('workerHeading')} ({userData.workers.length})</span>
+              <span className="text-[11px] text-slate-400 font-normal">{t('workerSubheading')}</span>
             </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
+            <div className="overflow-x-auto w-full">
+              <table className="w-full text-left text-xs min-w-[650px]">
                 <thead className="bg-slate-50 text-slate-500 border-b border-slate-200">
                   <tr>
-                    <th className="px-4 py-2.5">Worker ID</th>
-                    <th className="px-4 py-2.5">Name</th>
-                    <th className="px-4 py-2.5">Assigned Department</th>
-                    <th className="px-4 py-2.5">Phone Number</th>
-                    <th className="px-4 py-2.5">Account Status</th>
-                    <th className="px-4 py-2.5 text-right">Actions</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'কৰ্মী আইডি' : 'Worker ID'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'নাম' : 'Name'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'দায়িত্বপ্ৰাপ্ত বিভাগ' : 'Assigned Department'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'ফোন নম্বৰ' : 'Phone Number'}</th>
+                    <th className="px-4 py-2.5">{lang === 'as' ? 'স্থিতি' : 'Account Status'}</th>
+                    <th className="px-4 py-2.5 text-right">{lang === 'as' ? 'কাৰ্য্যকলাপ' : 'Actions'}</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
@@ -1165,7 +1333,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       <td className="px-4 py-3">{w.phone || '—'}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
-                          Active Crew
+                          {lang === 'as' ? 'সক্ৰিয় কৰ্মী' : 'Active Crew'}
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
@@ -1177,7 +1345,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="p-1.5 rounded-lg text-indigo-700 hover:bg-indigo-50 border border-indigo-200 transition-all cursor-pointer flex items-center space-x-1"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
-                            <span className="hidden sm:inline text-[11px] font-bold">Edit</span>
+                            <span className="hidden sm:inline text-[11px] font-bold">{lang === 'as' ? 'সম্পাদনা' : 'Edit'}</span>
                           </button>
 
                           {/* Delete Worker */}
@@ -1199,9 +1367,9 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
           {/* University Pre-Admission Roster with Edit & Delete */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center justify-between">
-              <span>Campus Pre-Admission Roster ({userData.roster?.length || 0})</span>
-              <span className="text-[11px] text-slate-400 font-normal">Pre-approved roll numbers for student admission verification</span>
+            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+              <span>{t('rosterHeading')} ({userData.roster?.length || 0})</span>
+              <span className="text-[11px] text-slate-400 font-normal">{t('rosterSubheading')}</span>
             </div>
 
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
@@ -1215,7 +1383,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                         item.isClaimed ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-800'
                       }`}>
-                        {item.isClaimed ? 'Claimed / Registered' : 'Available'}
+                        {item.isClaimed ? (lang === 'as' ? 'পঞ্জীয়ন সম্পন্ন' : 'Claimed / Registered') : (lang === 'as' ? 'উপলব্ধ' : 'Available')}
                       </span>
                     </div>
                   </div>
@@ -1249,20 +1417,22 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           
           <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-xs">
             <h4 className="font-bold text-slate-800 text-sm mb-1">
-              Campus Grievance Categories ({categoriesList.length})
+              {lang === 'as' ? 'কেম্পাছ অভিযোগৰ বিভাগসমূহ' : 'Campus Grievance Categories'} ({categoriesList.length})
             </h4>
             <p className="text-xs text-slate-500 mb-4">
-              Add or remove issue categories. AI uses these for auto-classification.
+              {lang === 'as' ? 'অভিযোগ বিভাগ যোগ বা অপসাৰণ কৰক। AI-য়ে স্বয়ংক্ৰিয় শ্ৰেণীবিভাজনৰ বাবে ব্যৱহাৰ কৰে।' : 'Add or remove issue categories. AI uses these for auto-classification.'}
             </p>
 
             <form onSubmit={handleAddCategory} className="space-y-2.5 p-3 rounded-xl bg-slate-50 border border-slate-200 mb-4 text-xs">
-              <span className="font-bold text-slate-700 block">Add New Category:</span>
+              <span className="font-bold text-slate-700 block">
+                {lang === 'as' ? 'নতুন বিভাগ যোগ কৰক:' : 'Add New Category:'}
+              </span>
               <input
                 type="text"
                 required
                 value={newCatEn}
                 onChange={(e) => setNewCatEn(e.target.value)}
-                placeholder="Category Name in English (e.g. Solar Energy)"
+                placeholder={lang === 'as' ? 'ইংৰাজীত বিভাগৰ নাম (যেনে Solar Energy)' : 'Category Name in English (e.g. Solar Energy)'}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
               />
               <input
@@ -1270,21 +1440,21 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 required
                 value={newCatAs}
                 onChange={(e) => setNewCatAs(e.target.value)}
-                placeholder="Category Name in Assamese (e.g. সৌৰ শক্তি)"
+                placeholder={lang === 'as' ? 'অসমীয়াত বিভাগৰ নাম (যেনে সৌৰ শক্তি)' : 'Category Name in Assamese (e.g. সৌৰ শক্তি)'}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300 font-assamese"
               />
               <input
                 type="text"
                 value={newCatDept}
                 onChange={(e) => setNewCatDept(e.target.value)}
-                placeholder="Default Routing Department"
+                placeholder={lang === 'as' ? 'ডিফল্ট প্ৰেৰণ বিভাগ' : 'Default Routing Department'}
                 className="w-full px-3 py-1.5 rounded-lg border border-slate-300"
               />
               <button
                 type="submit"
                 className="w-full py-1.5 rounded-lg font-bold bg-slate-900 text-white hover:bg-slate-800 cursor-pointer"
               >
-                + Save Category
+                {lang === 'as' ? '+ বিভাগ সংৰক্ষণ কৰক' : '+ Save Category'}
               </button>
             </form>
 
@@ -1299,7 +1469,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   <button
                     onClick={() => handleDeleteCategory(cat.id)}
                     className="p-1 text-rose-600 hover:bg-rose-50 rounded cursor-pointer"
-                    title="Delete category"
+                    title={lang === 'as' ? 'বিভাগ মচি পেলাওক' : 'Delete category'}
                   >
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -1312,18 +1482,20 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
             <div className="flex items-center justify-between mb-1">
               <h4 className="font-bold text-slate-800 text-sm flex items-center space-x-1.5">
                 <MapPin className="w-4 h-4 text-emerald-600" />
-                <span>Campus Facilities & Geo-Spatial Map Placement ({locationsList.length})</span>
+                <span>{lang === 'as' ? 'কেম্পাছ স্থান আৰু মেপ স্থানাংক নিৰ্ধাৰণ' : 'Campus Facilities & Geo-Spatial Map Placement'} ({locationsList.length})</span>
               </h4>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Add campus buildings, departments, or sectors to the interactive map by specifying X/Y axis coordinates or distance & direction from any existing department.
+              {lang === 'as'
+                ? 'ইন্টৰেক্টিভ মেপত স্থান যোগ কৰক: পোনপটীয়া X/Y অক্ষ স্থানাংক বা নিকটৱৰ্তী বিভাগৰ পৰা দূৰত্ব আৰু দিশ উল্লেখ কৰক।'
+                : 'Add campus buildings, departments, or sectors to the interactive map by specifying X/Y axis coordinates or distance & direction from any existing department.'}
             </p>
 
             <form onSubmit={handleAddLocation} className="space-y-3.5 p-4 rounded-2xl bg-slate-50 border border-slate-200 mb-5 text-xs">
               <div className="flex items-center justify-between pb-2 border-b border-slate-200">
                 <span className="font-extrabold text-slate-800 flex items-center space-x-1">
                   <Plus className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>Pin New Place on Campus Map</span>
+                  <span>{lang === 'as' ? 'কেম্পাছ মেপত নতুন স্থান পিন কৰক' : 'Pin New Place on Campus Map'}</span>
                 </span>
                 
                 {/* Mode Selector */}
@@ -1335,7 +1507,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       locInputMode === 'coords' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600'
                     }`}
                   >
-                    📍 Direct Coordinates (X/Y)
+                    {lang === 'as' ? '📍 পোনপটীয়া স্থানাংক (X/Y)' : '📍 Direct Coordinates (X/Y)'}
                   </button>
                   <button
                     type="button"
@@ -1344,7 +1516,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       locInputMode === 'relative' ? 'bg-white text-emerald-700 shadow-xs' : 'text-slate-600'
                     }`}
                   >
-                    🧭 From Department (Distance/Dir)
+                    {lang === 'as' ? '🧭 বিভাগৰ পৰা (দূৰত্ব/দিশ)' : '🧭 From Department (Distance/Dir)'}
                   </button>
                 </div>
               </div>
@@ -1352,7 +1524,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               {/* Name Fields */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Place Name (English):</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'স্থানৰ নাম (ইংৰাজী):' : 'Place Name (English):'}</label>
                   <input
                     type="text"
                     required
@@ -1363,13 +1535,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   />
                 </div>
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 mb-1">Place Name (অসমীয়া):</label>
+                  <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'স্থানৰ নাম (অসমীয়া):' : 'Place Name (অসমীয়া):'}</label>
                   <input
                     type="text"
                     required
                     value={newLocAs}
                     onChange={(e) => setNewLocAs(e.target.value)}
-                    placeholder="e.g. নেন’প্ৰযুক্তি গৱেষণা কেন্দ্ৰ"
+                    placeholder="যেনে নেন’প্ৰযুক্তি গৱেষণা কেন্দ্ৰ"
                     className="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white font-assamese"
                   />
                 </div>
@@ -1380,7 +1552,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 <div className="space-y-3 p-3 bg-white rounded-xl border border-slate-200">
                   <div>
                     <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
-                      <span>X-Axis (West to East):</span>
+                      <span>{lang === 'as' ? 'X-অক্ষ (পশ্চিমৰ পৰা পূবলৈ):' : 'X-Axis (West to East):'}</span>
                       <span className="font-mono font-bold text-indigo-600">{locX}%</span>
                     </div>
                     <input
@@ -1392,15 +1564,15 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />
                     <div className="flex justify-between text-[9px] text-slate-400 mt-0.5">
-                      <span>West Campus (8%)</span>
-                      <span>Center (50%)</span>
-                      <span>East Campus (92%)</span>
+                      <span>{lang === 'as' ? 'পশ্চিম কেম্পাছ (8%)' : 'West Campus (8%)'}</span>
+                      <span>{lang === 'as' ? 'কেন্দ্ৰ (50%)' : 'Center (50%)'}</span>
+                      <span>{lang === 'as' ? 'পূব কেম্পাছ (92%)' : 'East Campus (92%)'}</span>
                     </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-[11px] font-semibold text-slate-600 mb-1">
-                      <span>Y-Axis (North to South):</span>
+                      <span>{lang === 'as' ? 'Y-অক্ষ (উত্তৰৰ পৰা দক্ষিণলৈ):' : 'Y-Axis (North to South):'}</span>
                       <span className="font-mono font-bold text-indigo-600">{locY}%</span>
                     </div>
                     <input
@@ -1412,9 +1584,9 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
                     />
                     <div className="flex justify-between text-[9px] text-slate-400 mt-0.5">
-                      <span>North Campus (8%)</span>
-                      <span>Center (50%)</span>
-                      <span>South Campus (92%)</span>
+                      <span>{lang === 'as' ? 'উত্তৰ কেম্পাছ (8%)' : 'North Campus (8%)'}</span>
+                      <span>{lang === 'as' ? 'কেন্দ্ৰ (50%)' : 'Center (50%)'}</span>
+                      <span>{lang === 'as' ? 'দক্ষিণ কেম্পাছ (92%)' : 'South Campus (92%)'}</span>
                     </div>
                   </div>
                 </div>
@@ -1422,21 +1594,21 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 /* Mode B: Relative Distance & Direction from Department */
                 <div className="space-y-3 p-3 bg-white rounded-xl border border-slate-200">
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 mb-1">Reference Department / Building:</label>
+                    <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'প্ৰসংগ বিভাগ / ভৱন:' : 'Reference Department / Building:'}</label>
                     <select
                       value={locRefDept}
                       onChange={(e) => setLocRefDept(e.target.value)}
                       className="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white"
                     >
                       {locationsList.map(l => (
-                        <option key={l.id} value={l.id}>{l.en} (X: {l.x ?? 50}%, Y: {l.y ?? 50}%)</option>
+                        <option key={l.id} value={l.id}>{lang === 'as' ? l.as : l.en} (X: {l.x ?? 50}%, Y: {l.y ?? 50}%)</option>
                       ))}
                     </select>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2.5">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Distance (in meters):</label>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'দূৰত্ব (মিটাৰত):' : 'Distance (in meters):'}</label>
                       <input
                         type="number"
                         min="20"
@@ -1448,20 +1620,20 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 mb-1">Direction from Dept:</label>
+                      <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'বিভাগৰ পৰা দিশ:' : 'Direction from Dept:'}</label>
                       <select
                         value={locDirection}
                         onChange={(e) => setLocDirection(e.target.value)}
                         className="w-full px-3 py-1.5 rounded-lg border border-slate-300 bg-white"
                       >
-                        <option value="North">North (উত্তৰ)</option>
-                        <option value="North-East">North-East (উত্তৰ-পূব)</option>
-                        <option value="East">East (পূব)</option>
-                        <option value="South-East">South-East (দক্ষিণ-পূব)</option>
-                        <option value="South">South (দক্ষিণ)</option>
-                        <option value="South-West">South-West (দক্ষিণ-পশ্চিম)</option>
-                        <option value="West">West (পশ্চিম)</option>
-                        <option value="North-West">North-West (উত্তৰ-পশ্চিম)</option>
+                        <option value="North">{lang === 'as' ? 'উত্তৰ (North)' : 'North (উত্তৰ)'}</option>
+                        <option value="North-East">{lang === 'as' ? 'উত্তৰ-পূব (North-East)' : 'North-East (উত্তৰ-পূব)'}</option>
+                        <option value="East">{lang === 'as' ? 'পূব (East)' : 'East (পূব)'}</option>
+                        <option value="South-East">{lang === 'as' ? 'দক্ষিণ-পূব (South-East)' : 'South-East (দক্ষিণ-পূব)'}</option>
+                        <option value="South">{lang === 'as' ? 'দক্ষিণ (South)' : 'South (দক্ষিণ)'}</option>
+                        <option value="South-West">{lang === 'as' ? 'দক্ষিণ-পশ্চিম (South-West)' : 'South-West (দক্ষিণ-পশ্চিম)'}</option>
+                        <option value="West">{lang === 'as' ? 'পশ্চিম (West)' : 'West (পশ্চিম)'}</option>
+                        <option value="North-West">{lang === 'as' ? 'উত্তৰ-পশ্চিম (North-West)' : 'North-West (উত্তৰ-পশ্চিম)'}</option>
                       </select>
                     </div>
                   </div>
@@ -1473,7 +1645,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                     return (
                       <div className="p-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-900 text-[11px] flex items-center justify-between">
                         <span>
-                          🧭 <strong>Calculated:</strong> {locDistance}m {locDirection} of {refObj?.en || 'Dept'}
+                          🧭 <strong>{lang === 'as' ? 'গণনা কৰা অৱস্থান:' : 'Calculated:'}</strong> {locDistance}m {locDirection} of {refObj ? (lang === 'as' ? refObj.as : refObj.en) : 'Dept'}
                         </span>
                         <span className="font-mono font-bold text-emerald-700">
                           (X: {calc.x}%, Y: {calc.y}%)
@@ -1511,13 +1683,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                       </div>
                       <div className="text-[11px] text-slate-300">
                         <div className="font-bold text-white flex items-center space-x-1">
-                          <span>Live Map Placement Coordinates</span>
+                          <span>{lang === 'as' ? 'মেপ স্থানাংক পূৰ্বপ্ৰদৰ্শন' : 'Live Map Placement Coordinates'}</span>
                         </div>
                         <div className="text-emerald-400 font-mono mt-0.5">
                           X: {pX}% | Y: {pY}%
                         </div>
                         <div className="text-[10px] text-slate-400">
-                          Will appear live on Interactive Campus Map.
+                          {lang === 'as' ? 'কেম্পাছৰ ইন্টৰেক্টিভ মেপত পোনপটীয়াকৈ প্ৰদৰ্শিত হ’ব।' : 'Will appear live on Interactive Campus Map.'}
                         </div>
                       </div>
                     </>
@@ -1530,7 +1702,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 className="w-full py-2 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-700/20 cursor-pointer flex items-center justify-center space-x-1.5 transition-all"
               >
                 <MapPin className="w-4 h-4" />
-                <span>+ Create & Pin Place to Campus Map</span>
+                <span>{lang === 'as' ? '+ কেম্পাছ মেপত স্থান পিন কৰক' : '+ Create & Pin Place to Campus Map'}</span>
               </button>
             </form>
 
@@ -1555,7 +1727,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   <button
                     onClick={() => handleDeleteLocation(loc.id)}
                     className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg cursor-pointer transition-colors"
-                    title="Delete location"
+                    title={lang === 'as' ? 'স্থান মচি পেলাওক' : 'Delete location'}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -1571,27 +1743,29 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       {activeAdminTab === 'settings' && (
         <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-xs max-w-2xl animate-fadeIn">
           <h4 className="font-extrabold text-slate-800 text-base mb-1">
-            AI Triage & Auto-Dispatch Policy Configuration
+            {lang === 'as' ? 'AI ট্ৰায়াজ আৰু স্বয়ংক্ৰিয় প্ৰেৰণ নীতি কনফিগাৰেচন' : 'AI Triage & Auto-Dispatch Policy Configuration'}
           </h4>
           <p className="text-xs text-slate-500 mb-6">
-            Configure whether AI appoints maintenance crews directly or awaits administrative approval before dispatching work orders.
+            {lang === 'as'
+              ? 'নিৰ্ধাৰণ কৰক যে AI-য়ে কৰ্মীলৈ পোনে পোনে কাৰ্য্য আদেশ প্ৰেৰণ কৰিব নে প্ৰশাসকৰ অনুমোদনৰ বাবে অপেক্ষা কৰিব।'
+              : 'Configure whether AI appoints maintenance crews directly or awaits administrative approval before dispatching work orders.'}
           </p>
 
-          <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between mb-4">
+          <div className="p-4 rounded-2xl border border-slate-200 bg-slate-50 flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div>
               <span className="font-bold text-sm text-slate-800 block">
-                Direct AI Auto-Dispatch to Workers
+                {lang === 'as' ? 'কৰ্মীলৈ প্ৰত্যক্ষ AI স্বয়ংক্ৰিয় প্ৰেৰণ' : 'Direct AI Auto-Dispatch to Workers'}
               </span>
               <p className="text-xs text-slate-500 mt-0.5">
                 {settings.aiAutoDispatch
-                  ? 'Active: AI automatically classifies issues and directly dispatches them to assigned workers.'
-                  : 'Manual Approval: AI analyzes issues, but work orders remain pending until Admin clicks "Approve Dispatch".'}
+                  ? (lang === 'as' ? 'সক্ৰিয়: AI-য়ে স্বয়ংক্ৰিয়ভাৱে শ্ৰেণীবিভাজন কৰি দায়িত্বপ্ৰাপ্ত কৰ্মীলৈ প্ৰেৰণ কৰে।' : 'Active: AI automatically classifies issues and directly dispatches them to assigned workers.')
+                  : (lang === 'as' ? 'মেনুৱেল অনুমোদন: AI-য়ে বিশ্লেষণ কৰে, কিন্তু প্ৰশাসকে "অনুমোদন" নকৰালৈকে কাৰ্য্য আদেশ অমীমাংসিত থাকে।' : 'Manual Approval: AI analyzes issues, but work orders remain pending until Admin clicks "Approve Dispatch".')}
               </p>
             </div>
 
             <button
               onClick={handleToggleDispatchMode}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer flex-shrink-0 ${
                 settings.aiAutoDispatch
                   ? 'bg-emerald-600 text-white'
                   : 'bg-amber-600 text-white'
@@ -1600,64 +1774,64 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               {settings.aiAutoDispatch ? (
                 <>
                   <ToggleRight className="w-5 h-5" />
-                  <span>Direct Auto-Dispatch (ON)</span>
+                  <span>{lang === 'as' ? 'স্বয়ংক্ৰিয় প্ৰেৰণ (অন)' : 'Direct Auto-Dispatch (ON)'}</span>
                 </>
               ) : (
                 <>
                   <ToggleLeft className="w-5 h-5" />
-                  <span>Admin Permission (REQUIRED)</span>
+                  <span>{lang === 'as' ? 'প্ৰশাসকৰ অনুমতি (প্ৰয়োজন)' : 'Admin Permission (REQUIRED)'}</span>
                 </>
               )}
             </button>
           </div>
 
           <div className="p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-900 text-xs">
-            <strong>Campus Administrative Email:</strong> {settings.adminEmail || 'admin@example.invalid'} (Master recovery email).
+            <strong>{lang === 'as' ? 'কেম্পাছ প্ৰশাসনিক ইমেইল:' : 'Campus Administrative Email:'}</strong> {settings.adminEmail || 'admin@example.invalid'} ({lang === 'as' ? 'মূল উদ্ধাৰ ইমেইল' : 'Master recovery email'}).
           </div>
 
           {/* Security & Change Admin Password (Internal only) */}
           <div className="p-5 rounded-2xl border border-slate-200 bg-slate-50 mt-5">
             <div className="flex items-center space-x-2 text-indigo-700 font-extrabold text-sm mb-1">
               <Key className="w-4 h-4 text-indigo-600" />
-              <span>Security & Change Master Administrator Password</span>
+              <span>{lang === 'as' ? 'সুৰক্ষা আৰু প্ৰধান প্ৰশাসকৰ পাছৱৰ্ড পৰিৱৰ্তন' : 'Security & Change Master Administrator Password'}</span>
             </div>
             <p className="text-xs text-slate-500 mb-4">
-              Update administrative master security password. (Public forgot-password option is disabled for Admin security).
+              {lang === 'as' ? 'প্ৰশাসনিক মূল সুৰক্ষা পাছৱৰ্ড সলনি কৰক।' : 'Update administrative master security password. (Public forgot-password option is disabled for Admin security).'}
             </p>
 
             <form onSubmit={handleChangeAdminPassword} className="space-y-3 text-xs max-w-md">
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Current Password:</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'বৰ্তমান পাছৱৰ্ড:' : 'Current Password:'}</label>
                 <input
                   type="password"
                   required
                   value={adminOldPassword}
                   onChange={(e) => setAdminOldPassword(e.target.value)}
-                  placeholder="Enter current password"
+                  placeholder={lang === 'as' ? 'বৰ্তমান পাছৱৰ্ড দিয়ক' : 'Enter current password'}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">New Password:</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'নতুন পাছৱৰ্ড:' : 'New Password:'}</label>
                 <input
                   type="password"
                   required
                   value={adminNewPassword}
                   onChange={(e) => setAdminNewPassword(e.target.value)}
-                  placeholder="Enter new administrator password"
+                  placeholder={lang === 'as' ? 'নতুন পাছৱৰ্ড দিয়ক' : 'Enter new administrator password'}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
                 />
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-700 mb-1">Confirm New Password:</label>
+                <label className="block text-[11px] font-bold text-slate-700 mb-1">{lang === 'as' ? 'নতুন পাছৱৰ্ড নিশ্চিত কৰক:' : 'Confirm New Password:'}</label>
                 <input
                   type="password"
                   required
                   value={adminConfirmPassword}
                   onChange={(e) => setAdminConfirmPassword(e.target.value)}
-                  placeholder="Re-enter new password to verify"
+                  placeholder={lang === 'as' ? 'নতুন পাছৱৰ্ড পুনৰ লিখক' : 'Re-enter new password to verify'}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-white"
                 />
               </div>
@@ -1673,7 +1847,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 disabled={adminPwdLoading}
                 className="px-5 py-2 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/20 transition-all cursor-pointer disabled:opacity-50"
               >
-                {adminPwdLoading ? 'Updating Password...' : 'Save New Password'}
+                {adminPwdLoading ? (lang === 'as' ? 'পাছৱৰ্ড সলনি হৈ আছে...' : 'Updating Password...') : (lang === 'as' ? 'নতুন পাছৱৰ্ড সংৰক্ষণ কৰক' : 'Save New Password')}
               </button>
             </form>
           </div>
@@ -1682,7 +1856,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
       {/* ================= SECTION 5: LIVE RAW DATABASE VIEWER & MANAGER ================= */}
       {activeAdminTab === 'database' && (
-        <div className="bg-slate-950 text-white rounded-3xl p-6 border border-slate-800 shadow-2xl animate-fadeIn space-y-6">
+        <div className="bg-slate-950 text-white rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-2xl animate-fadeIn space-y-6">
           
           {/* Header & Path Banner */}
           <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-5 border-b border-slate-800 gap-4">
@@ -1693,26 +1867,26 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               <div>
                 <div className="flex flex-wrap items-center gap-2">
                   <h4 className="font-extrabold text-base text-white">
-                    Campus Database Management Console
+                    {t('dbConsoleTitle')}
                   </h4>
                   <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
                     <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
-                    <span>Live Disk Storage</span>
+                    <span>{t('dbLiveStorage')}</span>
                   </span>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-400">
-                  <span>Physical File:</span>
+                  <span>{t('dbPhysicalFile')}:</span>
                   <code className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-emerald-400 font-mono text-[11px]">
                     backend/data/issues.json
                   </code>
                   <span className="text-slate-600">•</span>
-                  <span className="text-slate-400">Disk changes persist immediately</span>
+                  <span className="text-slate-400">{t('dbPersistNotice')}</span>
                 </div>
               </div>
             </div>
 
-            {/* Controls */}
-            <div className="flex flex-wrap items-center gap-2.5">
+            {/* Controls & Export Toolbar */}
+            <div className="flex flex-wrap items-center gap-2">
               {/* View Mode Toggle */}
               <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center space-x-1">
                 <button
@@ -1724,7 +1898,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   }`}
                 >
                   <Eye className="w-3.5 h-3.5" />
-                  <span>Interactive Cards</span>
+                  <span>{t('dbViewInteractive')}</span>
                 </button>
                 <button
                   onClick={() => setDbViewMode('json')}
@@ -1735,17 +1909,37 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   }`}
                 >
                   <Code className="w-3.5 h-3.5" />
-                  <span>Raw JSON Code</span>
+                  <span>{t('dbViewJson')}</span>
                 </button>
               </div>
 
               {/* Refresh Database */}
               <button
                 onClick={loadRawDatabase}
-                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 flex items-center space-x-1.5 cursor-pointer transition-all"
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 flex items-center space-x-1.5 cursor-pointer transition-all"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
-                <span>Reload Disk Data</span>
+                <span>{t('dbReloadBtn')}</span>
+              </button>
+
+              {/* 1-Click Export CSV (Grievances) */}
+              <button
+                onClick={handleExportCsv}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1.5 cursor-pointer transition-all"
+                title={lang === 'as' ? 'CSV প্ৰতিবেদন ডাউনলোড কৰক' : 'Download CSV Report'}
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>{lang === 'as' ? 'CSV ৰপ্তানি' : 'Export CSV'}</span>
+              </button>
+
+              {/* 1-Click Export JSON (Full Database) */}
+              <button
+                onClick={handleExportJson}
+                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 flex items-center space-x-1.5 cursor-pointer transition-all"
+                title={lang === 'as' ? 'সম্পূৰ্ণ JSON ডাটাবেচ বেকআপ' : 'Full Database Backup JSON'}
+              >
+                <HardDrive className="w-3.5 h-3.5" />
+                <span>{lang === 'as' ? 'JSON বেকআপ' : 'Backup JSON'}</span>
               </button>
             </div>
           </div>
@@ -1759,13 +1953,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               }`}
             >
               <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-                <span>Grievances</span>
+                <span>{t('dbStatGrievances')}</span>
                 <span>📋</span>
               </div>
               <div className="text-xl font-black text-white mt-1">
                 {rawDbData?.issues?.length || 0}
               </div>
-              <div className="text-[10px] text-indigo-400 mt-0.5">Work Orders</div>
+              <div className="text-[10px] text-indigo-400 mt-0.5">{t('dbStatWorkOrders')}</div>
             </div>
 
             <div 
@@ -1775,13 +1969,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               }`}
             >
               <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-                <span>All Users</span>
+                <span>{t('dbStatAllUsers')}</span>
                 <span>👥</span>
               </div>
               <div className="text-xl font-black text-white mt-1">
                 {rawDbData?.users?.length || 0}
               </div>
-              <div className="text-[10px] text-emerald-400 mt-0.5">Profiles on File</div>
+              <div className="text-[10px] text-emerald-400 mt-0.5">{t('dbStatProfiles')}</div>
             </div>
 
             <div 
@@ -1791,13 +1985,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               }`}
             >
               <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-                <span>Students</span>
+                <span>{t('dbStatStudents')}</span>
                 <span>🎓</span>
               </div>
               <div className="text-xl font-black text-white mt-1">
                 {(rawDbData?.users || []).filter(u => u.role === 'student').length}
               </div>
-              <div className="text-[10px] text-cyan-400 mt-0.5">Verified Accounts</div>
+              <div className="text-[10px] text-cyan-400 mt-0.5">{t('dbStatVerified')}</div>
             </div>
 
             <div 
@@ -1807,13 +2001,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               }`}
             >
               <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-                <span>Workers</span>
+                <span>{t('dbStatWorkers')}</span>
                 <span>🔧</span>
               </div>
               <div className="text-xl font-black text-white mt-1">
                 {(rawDbData?.users || []).filter(u => u.role === 'worker').length}
               </div>
-              <div className="text-[10px] text-amber-400 mt-0.5">Field Technicians</div>
+              <div className="text-[10px] text-amber-400 mt-0.5">{t('dbStatTechnicians')}</div>
             </div>
 
             <div 
@@ -1823,13 +2017,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               }`}
             >
               <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-                <span>Roster</span>
+                <span>{t('dbStatRoster')}</span>
                 <span>📜</span>
               </div>
               <div className="text-xl font-black text-white mt-1">
                 {rawDbData?.studentRoster?.length || 0}
               </div>
-              <div className="text-[10px] text-purple-400 mt-0.5">Pre-Admission Rolls</div>
+              <div className="text-[10px] text-purple-400 mt-0.5">{t('dbStatPreAdmission')}</div>
             </div>
 
             <div 
@@ -1839,13 +2033,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               }`}
             >
               <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
-                <span>Categories</span>
+                <span>{t('dbStatCategories')}</span>
                 <span>🏷️</span>
               </div>
               <div className="text-xl font-black text-white mt-1">
                 {rawDbData?.categories?.length || 0}
               </div>
-              <div className="text-[10px] text-rose-400 mt-0.5">Taxonomy & Zones</div>
+              <div className="text-[10px] text-rose-400 mt-0.5">{t('dbStatTaxonomy')}</div>
             </div>
           </div>
 
@@ -1855,12 +2049,12 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
             {/* Collection Buttons */}
             <div className="flex flex-wrap gap-1.5">
               {[
-                { id: 'issues', label: 'Issues & Grievances', icon: '📋', count: rawDbData?.issues?.length },
-                { id: 'users', label: 'User Accounts', icon: '👥', count: rawDbData?.users?.length },
-                { id: 'studentRoster', label: 'Pre-Admission Roster', icon: '📜', count: rawDbData?.studentRoster?.length },
-                { id: 'categories', label: 'Categories', icon: '🏷️', count: rawDbData?.categories?.length },
-                { id: 'locations', label: 'Campus Locations', icon: '📍', count: rawDbData?.locations?.length },
-                { id: 'settings', label: 'System Settings', icon: '⚙️', count: 'Config' }
+                { id: 'issues', label: t('dbColIssues'), icon: '📋', count: rawDbData?.issues?.length },
+                { id: 'users', label: t('dbColUsers'), icon: '👥', count: rawDbData?.users?.length },
+                { id: 'studentRoster', label: t('dbColRoster'), icon: '📜', count: rawDbData?.studentRoster?.length },
+                { id: 'categories', label: t('dbColCategories'), icon: '🏷️', count: rawDbData?.categories?.length },
+                { id: 'locations', label: t('dbColLocations'), icon: '📍', count: rawDbData?.locations?.length },
+                { id: 'settings', label: t('dbColSettings'), icon: '⚙️', count: 'Config' }
               ].map(col => (
                 <button
                   key={col.id}
@@ -1890,7 +2084,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   type="text"
                   value={dbSearchQuery}
                   onChange={(e) => setDbSearchQuery(e.target.value)}
-                  placeholder={`Search in ${dbCollection}...`}
+                  placeholder={lang === 'as' ? `${dbCollection} সংগ্ৰহত সন্ধান কৰক...` : `Search in ${dbCollection}...`}
                   className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
                 />
                 {dbSearchQuery && (
@@ -1908,18 +2102,22 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           {/* Sub-filters for Users */}
           {dbCollection === 'users' && dbViewMode === 'visual' && (
             <div className="flex items-center space-x-2 text-xs">
-              <span className="text-slate-400 font-bold">Filter Role:</span>
-              {['all', 'student', 'worker'].map(r => (
+              <span className="text-slate-400 font-bold">{t('dbFilterRole')}:</span>
+              {[
+                { id: 'all', label: t('dbRoleAll') },
+                { id: 'student', label: t('dbRoleStudent') },
+                { id: 'worker', label: t('dbRoleWorker') }
+              ].map(r => (
                 <button
-                  key={r}
-                  onClick={() => setDbUserRoleFilter(r)}
-                  className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
-                    dbUserRoleFilter === r
+                  key={r.id}
+                  onClick={() => setDbUserRoleFilter(r.id)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                    dbUserRoleFilter === r.id
                       ? 'bg-indigo-600 text-white'
                       : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
                   }`}
                 >
-                  {r === 'all' ? 'All Roles' : `${r}s`}
+                  {r.label}
                 </button>
               ))}
             </div>
@@ -1945,41 +2143,57 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 if (list.length === 0) {
                   return (
                     <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 text-slate-400 text-xs">
-                      No grievance records found matching criteria.
+                      {t('dbNoRecords')}
                     </div>
                   );
                 }
 
                 return (
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
-                    {list.map(issue => (
+                    {list.map(issue => {
+                      const bi = getIssueBilingual(issue);
+                      return (
                       <div key={issue.id} className="bg-slate-900 rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all shadow-md flex flex-col justify-between">
                         <div>
                           <div className="flex items-center justify-between text-xs mb-2">
                             <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60">
                               #{issue.ticketId}
                             </span>
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
-                              issue.status === 'resolved' ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' :
-                              issue.status === 'in_progress' ? 'bg-amber-900/80 text-amber-300 border border-amber-700' :
-                              'bg-slate-800 text-slate-300 border border-slate-700'
-                            }`}>
-                              {issue.status}
-                            </span>
+                            <div className="flex items-center space-x-1">
+                              <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-amber-950/60 text-amber-300 border border-amber-800/60">
+                                EN+AS
+                              </span>
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                                issue.status === 'resolved' ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' :
+                                issue.status === 'in_progress' ? 'bg-amber-900/80 text-amber-300 border border-amber-700' :
+                                'bg-slate-800 text-slate-300 border border-slate-700'
+                              }`}>
+                                {issue.status === 'resolved' ? (lang === 'as' ? 'সমাধান হ’ল' : 'Resolved') :
+                                 issue.status === 'in_progress' ? (lang === 'as' ? 'চলি আছে' : 'In Progress') :
+                                 (lang === 'as' ? 'দাখিল কৰা হ’ল' : issue.status)}
+                              </span>
+                            </div>
                           </div>
 
-                          <h5 className="font-bold text-sm text-white line-clamp-1 mb-1">
-                            {issue.title}
-                          </h5>
+                          <div className="space-y-1 mb-2">
+                            <div className="flex items-start gap-1">
+                              <span className="text-[8px] font-bold px-1 rounded bg-emerald-900/60 text-emerald-300 uppercase shrink-0 mt-0.5">EN</span>
+                              <h5 className="font-bold text-xs text-white line-clamp-1">{bi.titleEn}</h5>
+                            </div>
+                            <div className="flex items-start gap-1">
+                              <span className="text-[8px] font-bold px-1 rounded bg-amber-900/60 text-amber-300 uppercase shrink-0 mt-0.5 font-assamese">অসমীয়া</span>
+                              <h5 className="font-medium text-xs text-slate-300 line-clamp-1 font-assamese">{bi.titleAs}</h5>
+                            </div>
+                          </div>
 
-                          <p className="text-xs text-slate-400 line-clamp-2 mb-2 leading-relaxed">
-                            {issue.description || 'No description provided.'}
+                          <p className="text-[11px] text-slate-400 line-clamp-2 mb-2 leading-relaxed">
+                            {lang === 'as' ? bi.descriptionAs : bi.descriptionEn}
                           </p>
 
                           <div className="text-[11px] text-slate-400 space-y-0.5 mb-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
-                            <div className="truncate">📍 <strong className="text-slate-300">Zone:</strong> {issue.location || 'Campus'}</div>
-                            {issue.address && <div className="truncate text-amber-300">🏠 <strong className="text-slate-300">Address:</strong> {issue.address}</div>}
-                            <div>🕒 <strong className="text-slate-300">Date:</strong> {issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Recent'}</div>
+                            <div className="truncate">📍 <strong className="text-slate-300">{lang === 'as' ? 'স্থান:' : 'Zone:'}</strong> {issue.location || 'Campus'}</div>
+                            {issue.address && <div className="truncate text-amber-300">🏠 <strong className="text-slate-300">{lang === 'as' ? 'ঠিকনা:' : 'Address:'}</strong> {issue.address}</div>}
+                            <div>🕒 <strong className="text-slate-300">{lang === 'as' ? 'তাৰিখ:' : 'Date:'}</strong> {issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Recent'}</div>
                           </div>
                         </div>
 
@@ -1995,7 +2209,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all cursor-pointer flex items-center space-x-1"
                           >
                             <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-                            <span>Update Status</span>
+                            <span>{lang === 'as' ? 'স্থিতি সলনি কৰক' : 'Update Status'}</span>
                           </button>
 
                           <button
@@ -2003,12 +2217,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
                           >
                             <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                            <span>Delete Entry</span>
+                            <span>{t('dbDeleteBtn')}</span>
                           </button>
                         </div>
                       </div>
-                    ))}
-                  </div>
+                    );
+                  })}
+                </div>
                 );
               })()}
 
@@ -2032,7 +2247,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 if (list.length === 0) {
                   return (
                     <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 text-slate-400 text-xs">
-                      No user accounts found matching criteria.
+                      {t('dbNoRecords')}
                     </div>
                   );
                 }
@@ -2048,12 +2263,14 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                               user.role === 'worker' ? 'bg-amber-950 text-amber-300 border border-amber-700' :
                               'bg-emerald-950 text-emerald-300 border border-emerald-700'
                             }`}>
-                              {user.role}
+                              {user.role === 'admin' ? (lang === 'as' ? 'প্ৰধান এডমিন' : 'Admin') :
+                               user.role === 'worker' ? (lang === 'as' ? 'কৰ্মী' : 'Worker') :
+                               (lang === 'as' ? 'শিক্ষাৰ্থী' : 'Student')}
                             </span>
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               user.isActive !== false ? 'bg-emerald-900/60 text-emerald-300' : 'bg-rose-900/60 text-rose-300'
                             }`}>
-                              {user.isActive !== false ? 'Active' : 'Suspended'}
+                              {user.isActive !== false ? t('statusActive') : t('statusSuspended')}
                             </span>
                           </div>
 
@@ -2061,14 +2278,14 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             {user.name}
                           </h5>
                           <div className="font-mono text-xs text-slate-400 mb-2">
-                            ID: <strong className="text-slate-200">{user.username || user.rollNo}</strong>
+                            {lang === 'as' ? 'আইডি:' : 'ID:'} <strong className="text-slate-200">{user.username || user.rollNo}</strong>
                           </div>
 
                           <div className="text-[11px] text-slate-400 space-y-0.5 mb-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
-                            <div className="truncate">🏢 <strong className="text-slate-300">Dept:</strong> {user.department || 'General'}</div>
-                            <div className="truncate">📞 <strong className="text-slate-300">Phone:</strong> {user.phone || '—'}</div>
-                            <div className="truncate">✉️ <strong className="text-slate-300">Email:</strong> {user.email || '—'}</div>
-                            <div>🔑 <strong className="text-slate-300">Password:</strong> <span className="font-mono text-slate-500">••••••••</span></div>
+                            <div className="truncate">🏢 <strong className="text-slate-300">{lang === 'as' ? 'বিভাগ:' : 'Dept:'}</strong> {user.department || 'General'}</div>
+                            <div className="truncate">📞 <strong className="text-slate-300">{lang === 'as' ? 'ফোন:' : 'Phone:'}</strong> {user.phone || '—'}</div>
+                            <div className="truncate">✉️ <strong className="text-slate-300">{lang === 'as' ? 'ইমেইল:' : 'Email:'}</strong> {user.email || '—'}</div>
+                            <div>🔑 <strong className="text-slate-300">{lang === 'as' ? 'পাছৱৰ্ড:' : 'Password:'}</strong> <span className="font-mono text-slate-500">••••••••</span></div>
                           </div>
                         </div>
 
@@ -2079,7 +2296,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition-all cursor-pointer flex items-center space-x-1"
                           >
                             <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-                            <span>{user.role === 'admin' ? 'Edit Admin ID & Password' : 'Edit Profile'}</span>
+                            <span>{user.role === 'admin' ? (lang === 'as' ? 'এডমিন আইডি আৰু পাছৱৰ্ড সলনি' : 'Edit Admin ID & Password') : (lang === 'as' ? 'প্ৰফাইল সম্পাদনা' : 'Edit Profile')}</span>
                           </button>
 
                           {user.role !== 'admin' && (
@@ -2088,7 +2305,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                               className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
                             >
                               <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                              <span>Delete</span>
+                              <span>{t('dbDeleteBtn')}</span>
                             </button>
                           )}
                         </div>
@@ -2113,7 +2330,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 if (list.length === 0) {
                   return (
                     <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 text-slate-400 text-xs">
-                      No roster entries found matching criteria.
+                      {t('dbNoRecords')}
                     </div>
                   );
                 }
@@ -2130,7 +2347,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                               item.isClaimed ? 'bg-slate-800 text-slate-400' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
                             }`}>
-                              {item.isClaimed ? 'Account Claimed' : 'Available for Sign-up'}
+                              {item.isClaimed ? t('statusClaimed') : t('statusUnclaimed')}
                             </span>
                           </div>
 
@@ -2139,8 +2356,8 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                           </h5>
 
                           <div className="text-[11px] text-slate-400 space-y-0.5 mb-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
-                            <div className="truncate">🏛️ <strong className="text-slate-300">Dept:</strong> {item.department || 'General Academic'}</div>
-                            <div className="truncate">📞 <strong className="text-slate-300">Phone:</strong> {item.phone || '—'}</div>
+                            <div className="truncate">🏛️ <strong className="text-slate-300">{lang === 'as' ? 'বিভাগ:' : 'Dept:'}</strong> {item.department || 'General Academic'}</div>
+                            <div className="truncate">📞 <strong className="text-slate-300">{lang === 'as' ? 'ফোন:' : 'Phone:'}</strong> {item.phone || '—'}</div>
                           </div>
                         </div>
 
@@ -2151,7 +2368,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-purple-300 border border-slate-700 transition-all cursor-pointer flex items-center space-x-1"
                           >
                             <Edit3 className="w-3.5 h-3.5" />
-                            <span>Edit Roster</span>
+                            <span>{lang === 'as' ? 'ৰোষ্টাৰ সম্পাদনা' : 'Edit Roster'}</span>
                           </button>
 
                           <button
@@ -2159,7 +2376,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
                           >
                             <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                            <span>Delete Entry</span>
+                            <span>{t('dbDeleteBtn')}</span>
                           </button>
                         </div>
                       </div>
@@ -2189,7 +2406,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                           <h5 className="font-bold text-sm text-white mb-0.5">{cat.en}</h5>
                           <div className="text-xs text-emerald-400 font-assamese mb-2">{cat.as}</div>
                           <div className="text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
-                            🏢 Assigned Dept: <strong className="text-slate-200">{cat.defaultDept}</strong>
+                            🏢 {lang === 'as' ? 'দায়িত্বপ্ৰাপ্ত বিভাগ:' : 'Assigned Dept:'} <strong className="text-slate-200">{cat.defaultDept}</strong>
                           </div>
                         </div>
 
@@ -2199,7 +2416,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
                           >
                             <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                            <span>Delete Category</span>
+                            <span>{lang === 'as' ? 'বিভাগ মচি পেলাওক' : 'Delete Category'}</span>
                           </button>
                         </div>
                       </div>
@@ -2235,7 +2452,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                           <div className="text-xs text-emerald-400 font-assamese mb-2">{loc.as}</div>
                           {loc.refDept && (
                             <div className="text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
-                              📍 Relative: {loc.distanceMeters}m {loc.direction} from {loc.refDept}
+                              📍 {lang === 'as' ? 'আপেক্ষিক অৱস্থান:' : 'Relative:'} {loc.distanceMeters}m {loc.direction} from {loc.refDept}
                             </div>
                           )}
                         </div>
@@ -2246,7 +2463,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                             className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
                           >
                             <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                            <span>Delete Location</span>
+                            <span>{lang === 'as' ? 'স্থান মচি পেলাওক' : 'Delete Location'}</span>
                           </button>
                         </div>
                       </div>
@@ -2258,22 +2475,22 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               {/* === COLLECTION: SETTINGS === */}
               {dbCollection === 'settings' && (
                 <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 max-w-xl space-y-4">
-                  <h5 className="font-bold text-sm text-white">System Settings & Policies</h5>
+                  <h5 className="font-bold text-sm text-white">{lang === 'as' ? 'ছিষ্টেম ছেটিংছ আৰু নীতিসমূহ' : 'System Settings & Policies'}</h5>
                   
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
                     <div>
-                      <div className="font-bold text-xs text-white">AI Auto-Dispatch to Workers</div>
-                      <div className="text-[11px] text-slate-400">Current setting in database disk</div>
+                      <div className="font-bold text-xs text-white">{lang === 'as' ? 'কৰ্মীলৈ AI স্বয়ংক্ৰিয় প্ৰেৰণ' : 'AI Auto-Dispatch to Workers'}</div>
+                      <div className="text-[11px] text-slate-400">{lang === 'as' ? 'ডাটাবেচ ডিস্কৰ বৰ্তমান ছেটিংছ' : 'Current setting in database disk'}</div>
                     </div>
                     <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
                       rawDbData?.settings?.aiAutoDispatch ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300'
                     }`}>
-                      {rawDbData?.settings?.aiAutoDispatch ? 'Auto-Dispatch ON' : 'Approval Required'}
+                      {rawDbData?.settings?.aiAutoDispatch ? (lang === 'as' ? 'স্বয়ংক্ৰিয় প্ৰেৰণ সক্ৰিয়' : 'Auto-Dispatch ON') : (lang === 'as' ? 'অনুমোদন প্ৰয়োজন' : 'Approval Required')}
                     </span>
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                    <div className="font-bold text-xs text-white mb-1">Campus Name</div>
+                    <div className="font-bold text-xs text-white mb-1">{lang === 'as' ? 'কেম্পাছৰ নাম' : 'Campus Name'}</div>
                     <div className="text-xs text-slate-300 font-mono">
                       EN: {rawDbData?.settings?.campusName?.en || 'Assam State University'}
                     </div>
@@ -2283,7 +2500,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   </div>
 
                   <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
-                    <div className="font-bold text-xs text-white mb-1">Administrative Master Email</div>
+                    <div className="font-bold text-xs text-white mb-1">{lang === 'as' ? 'প্ৰশাসনিক মূল ইমেইল' : 'Administrative Master Email'}</div>
                     <div className="text-xs text-slate-300 font-mono">
                       {rawDbData?.settings?.adminEmail || 'admin@example.invalid'}
                     </div>
@@ -2296,19 +2513,19 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
             /* RAW JSON SYNTAX VIEWER */
             <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 max-h-[550px] overflow-y-auto font-mono text-xs text-emerald-300 leading-relaxed shadow-inner">
               <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-slate-400 text-[11px]">
-                <span>Showing collection: <strong className="text-white">{dbCollection}</strong></span>
+                <span>{lang === 'as' ? 'প্ৰদৰ্শিত সংগ্ৰহ:' : 'Showing collection:'} <strong className="text-white">{dbCollection}</strong></span>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(JSON.stringify(rawDbData?.[dbCollection], null, 2));
-                    showToast('JSON copied to clipboard!');
+                    showToast(lang === 'as' ? 'JSON ক্লিপব’ৰ্ডত কপি হ’ল!' : 'JSON copied to clipboard!');
                   }}
                   className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold cursor-pointer"
                 >
-                  Copy JSON
+                  {lang === 'as' ? 'JSON কপি কৰক' : 'Copy JSON'}
                 </button>
               </div>
               <pre className="whitespace-pre-wrap">
-                {rawDbData ? JSON.stringify(rawDbData[dbCollection], null, 2) : 'Loading database...'}
+                {rawDbData ? JSON.stringify(rawDbData[dbCollection], null, 2) : (lang === 'as' ? 'ডাটাবেচ লোড হৈ আছে...' : 'Loading database...')}
               </pre>
             </div>
           )}
@@ -2319,32 +2536,32 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       {/* ================= MODAL: STATUS UPDATE ================= */}
       {statusModalOpen && selectedIssue && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-300 max-w-lg w-full p-6 shadow-2xl">
+          <div className="bg-white rounded-3xl border border-slate-300 max-w-lg w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h4 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-200">
-              Update Work Order #{selectedIssue.ticketId}
+              {lang === 'as' ? `কাৰ্য্য আদেশ #${selectedIssue.ticketId} স্থিতি সলনি` : `Update Work Order #${selectedIssue.ticketId}`}
             </h4>
 
             <form onSubmit={handleSaveStatus} className="mt-4 space-y-4 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  New Status
+                  {lang === 'as' ? 'নতুন স্থিতি' : 'New Status'}
                 </label>
                 <select
                   value={newStatus}
                   onChange={(e) => setNewStatus(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
                 >
-                  <option value="investigating">Investigating (তদন্ত চলি আছে)</option>
-                  <option value="in_progress">In Progress (মেৰামতি চলি আছে)</option>
-                  <option value="assigned">Assigned to Crew (কাৰিকৰী দল প্ৰেৰিত)</option>
-                  <option value="resolved">Resolved & Verified (সমাধান আৰু প্ৰমাণিত)</option>
-                  <option value="closed">Closed (বন্ধ কৰা হ’ল)</option>
+                  <option value="investigating">{lang === 'as' ? 'তদন্ত চলি আছে (Investigating)' : 'Investigating (তদন্ত চলি আছে)'}</option>
+                  <option value="in_progress">{lang === 'as' ? 'মেৰামতি চলি আছে (In Progress)' : 'In Progress (মেৰামতি চলি আছে)'}</option>
+                  <option value="assigned">{lang === 'as' ? 'কাৰিকৰী দল প্ৰেৰিত (Assigned to Crew)' : 'Assigned to Crew (কাৰিকৰী দল প্ৰেৰিত)'}</option>
+                  <option value="resolved">{lang === 'as' ? 'সমাধান আৰু প্ৰমাণিত (Resolved & Verified)' : 'Resolved & Verified (সমাধান আৰু প্ৰমাণিত)'}</option>
+                  <option value="closed">{lang === 'as' ? 'বন্ধ কৰা হ’ল (Closed)' : 'Closed (বন্ধ কৰা হ’ল)'}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Assigned Officer / Crew
+                  {lang === 'as' ? 'দায়িত্বপ্ৰাপ্ত কাৰিকৰী বিষয়া / কৰ্মী' : 'Assigned Officer / Crew'}
                 </label>
                 <input
                   type="text"
@@ -2357,13 +2574,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Resolution / Technical Field Notes
+                  {lang === 'as' ? 'সমাধান / কাৰিকৰী ফিল্ড টোকা' : 'Resolution / Technical Field Notes'}
                 </label>
                 <textarea
                   rows={3}
                   value={resolutionNotes}
                   onChange={(e) => setResolutionNotes(e.target.value)}
-                  placeholder="Enter details of action taken..."
+                  placeholder={lang === 'as' ? 'পদক্ষেপৰ সবিশেষ লিখক...' : 'Enter details of action taken...'}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium font-assamese"
                 />
               </div>
@@ -2374,13 +2591,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   onClick={() => setStatusModalOpen(false)}
                   className="px-4 py-2 rounded-xl font-bold bg-slate-100 text-slate-700 cursor-pointer"
                 >
-                  Cancel
+                  {lang === 'as' ? 'বাতিল' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-xl font-bold bg-indigo-600 text-white cursor-pointer"
                 >
-                  Save Changes
+                  {lang === 'as' ? 'পৰিৱৰ্তন সংৰক্ষণ কৰক' : 'Save Changes'}
                 </button>
               </div>
             </form>
@@ -2391,15 +2608,15 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       {/* ================= MODAL: CREATE WORKER ================= */}
       {workerModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h4 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-200">
-              Create New Worker / Maintenance Account
+              {lang === 'as' ? 'নতুন মেৰামতি কৰ্মী / কাৰিকৰ একাউণ্ট সৃষ্টি কৰক' : 'Create New Worker / Maintenance Account'}
             </h4>
 
             <form onSubmit={handleCreateWorker} className="mt-4 space-y-3 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Worker ID <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'কৰ্মী আইডি' : 'Worker ID'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -2413,7 +2630,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Worker Full Name <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'কৰ্মীৰ সম্পূৰ্ণ নাম' : 'Worker Full Name'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -2427,25 +2644,25 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Department / Trade
+                  {lang === 'as' ? 'দায়িত্বপ্ৰাপ্ত বিভাগ / কাৰ্য্যক্ষেত্ৰ' : 'Department / Trade'}
                 </label>
                 <select
                   value={workerDept}
                   onChange={(e) => setWorkerDept(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold"
                 >
-                  <option value="Electrical Maintenance">Electrical Maintenance</option>
-                  <option value="Water Works & Sanitation">Water Works & Sanitation</option>
-                  <option value="Civil Infrastructure">Civil Infrastructure</option>
-                  <option value="Computer & Network Center">Computer & Network Center</option>
-                  <option value="Campus Hygiene & Sanitation">Campus Hygiene & Sanitation</option>
-                  <option value="Campus Security Unit">Campus Security Unit</option>
+                  <option value="Electrical Maintenance">{lang === 'as' ? 'বৈদ্যুতিক মেৰামতি (Electrical)' : 'Electrical Maintenance'}</option>
+                  <option value="Water Works & Sanitation">{lang === 'as' ? 'পানী যোগান আৰু অনাময় (Water & Sanitation)' : 'Water Works & Sanitation'}</option>
+                  <option value="Civil Infrastructure">{lang === 'as' ? 'অসামৰিক আন্তঃগাঁথনি (Civil Infrastructure)' : 'Civil Infrastructure'}</option>
+                  <option value="Computer & Network Center">{lang === 'as' ? 'কম্পিউটাৰ আৰু নেটৱৰ্ক কেন্দ্ৰ (IT & Network)' : 'Computer & Network Center'}</option>
+                  <option value="Campus Hygiene & Sanitation">{lang === 'as' ? 'কেম্পাছ স্বচ্ছতা আৰু পৰিষ্কাৰ (Hygiene)' : 'Campus Hygiene & Sanitation'}</option>
+                  <option value="Campus Security Unit">{lang === 'as' ? 'কেম্পাছ সুৰক্ষা বাহিনী (Security)' : 'Campus Security Unit'}</option>
                 </select>
               </div>
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Mobile / Phone Number <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'মোবাইল / ফোন নম্বৰ' : 'Mobile / Phone Number'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="tel"
@@ -2459,7 +2676,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Temporary Password <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'অস্থায়ী পাছৱৰ্ড' : 'Temporary Password'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -2477,13 +2694,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   onClick={() => setWorkerModalOpen(false)}
                   className="px-4 py-2 rounded-xl font-bold bg-slate-100 text-slate-700 cursor-pointer"
                 >
-                  Cancel
+                  {lang === 'as' ? 'বাতিল' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-xl font-bold bg-amber-600 text-white cursor-pointer"
                 >
-                  Create Worker ID
+                  {lang === 'as' ? 'কৰ্মী আইডি সৃষ্টি কৰক' : 'Create Worker ID'}
                 </button>
               </div>
             </form>
@@ -2494,15 +2711,15 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       {/* ================= MODAL: ADD ROSTER ENTRY ================= */}
       {rosterModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <h4 className="text-base font-bold text-slate-900 pb-3 border-b border-slate-200">
-              Add Student to Admission Roster
+              {lang === 'as' ? 'ভৰ্তি ৰোষ্টাৰত ছাত্ৰ-ছাত্ৰী যোগ কৰক' : 'Add Student to Admission Roster'}
             </h4>
 
             <form onSubmit={handleAddRoster} className="mt-4 space-y-3 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Unique Admission Roll No. <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'ভৰ্তি ৰোল নম্বৰ' : 'Unique Admission Roll No.'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -2516,7 +2733,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Full Name (As in Admission Record) <span className="text-rose-500">*</span>
+                  {lang === 'as' ? 'সম্পূৰ্ণ নাম (ভৰ্তি নথি অনুসৰি)' : 'Full Name (As in Admission Record)'} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -2530,7 +2747,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Department
+                  {lang === 'as' ? 'শৈক্ষিক বিভাগ' : 'Department'}
                 </label>
                 <input
                   type="text"
@@ -2543,7 +2760,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Student Phone
+                  {lang === 'as' ? 'শিক্ষাৰ্থীৰ ফোন নম্বৰ' : 'Student Phone'}
                 </label>
                 <input
                   type="tel"
@@ -2560,13 +2777,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   onClick={() => setRosterModalOpen(false)}
                   className="px-4 py-2 rounded-xl font-bold bg-slate-100 text-slate-700 cursor-pointer"
                 >
-                  Cancel
+                  {lang === 'as' ? 'বাতিল' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-xl font-bold bg-emerald-600 text-white cursor-pointer"
                 >
-                  Save to Roster
+                  {lang === 'as' ? 'ৰোষ্টাৰত সংৰক্ষণ কৰক' : 'Save to Roster'}
                 </button>
               </div>
             </form>
@@ -2621,7 +2838,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 className="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 hover:bg-slate-200 text-slate-700 transition-all cursor-pointer"
               >
                 <Printer className="w-4 h-4 text-slate-600" />
-                <span>Print Notice</span>
+                <span>{lang === 'as' ? 'জাননী প্ৰিণ্ট কৰক' : 'Print Notice'}</span>
               </button>
 
               <div className="flex items-center space-x-2">
@@ -2630,14 +2847,14 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   className="flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 transition-all cursor-pointer"
                 >
                   <Copy className="w-4 h-4 text-indigo-600" />
-                  <span>{copied ? '✓ Copied!' : 'Copy Notice'}</span>
+                  <span>{copied ? (lang === 'as' ? '✓ কপি হ’ল!' : '✓ Copied!') : (lang === 'as' ? 'জাননী কপি কৰক' : 'Copy Notice')}</span>
                 </button>
                 
                 <button
                   onClick={() => setNoticeModalOpen(false)}
                   className="px-4 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer"
                 >
-                  Close
+                  {lang === 'as' ? 'বন্ধ কৰক' : 'Close'}
                 </button>
               </div>
             </div>
@@ -2646,15 +2863,17 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
         </div>
       )}
 
-      {/* ================= MODAL: EDIT USER (STUDENT OR WORKER) ================= */}
+      {/* ================= MODAL: EDIT USER (ADMIN, STUDENT OR WORKER) ================= */}
       {editUserModalOpen && editingUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center space-x-2">
                 <Edit3 className="w-5 h-5 text-indigo-600" />
                 <h4 className="text-base font-extrabold text-slate-900">
-                  Edit {editingUser.role === 'student' ? 'Student' : editingUser.role === 'admin' ? 'Administrator' : 'Worker'} Profile
+                  {lang === 'as'
+                    ? (editingUser.role === 'student' ? 'শিক্ষাৰ্থী প্ৰফাইল সম্পাদনা' : editingUser.role === 'admin' ? 'প্ৰধান প্ৰশাসকৰ তথ্য সম্পাদনা' : 'কাৰিকৰী কৰ্মী প্ৰফাইল সম্পাদনা')
+                    : (`Edit ${editingUser.role === 'student' ? 'Student' : editingUser.role === 'admin' ? 'Administrator' : 'Worker'} Profile`)}
                 </h4>
               </div>
               <button
@@ -2668,7 +2887,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
             <form onSubmit={handleSaveEditUser} className="mt-4 space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Full Name
+                  {lang === 'as' ? 'সম্পূৰ্ণ নাম' : 'Full Name'}
                 </label>
                 <input
                   type="text"
@@ -2682,7 +2901,9 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    {editingUser.role === 'student' ? 'Admission Roll No.' : editingUser.role === 'admin' ? 'Admin Username / ID' : 'Worker ID'}
+                    {lang === 'as'
+                      ? (editingUser.role === 'student' ? 'ভৰ্তি ৰোল নম্বৰ' : editingUser.role === 'admin' ? 'এডমিন ইউজাৰনেম / আইডি' : 'কৰ্মী আইডি')
+                      : (editingUser.role === 'student' ? 'Admission Roll No.' : editingUser.role === 'admin' ? 'Admin Username / ID' : 'Worker ID')}
                   </label>
                   <input
                     type="text"
@@ -2702,7 +2923,9 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    {editingUser.role === 'admin' ? 'Administrative Title' : 'Department'}
+                    {lang === 'as'
+                      ? (editingUser.role === 'admin' ? 'প্ৰশাসনিক পদবী' : 'বিভাগ')
+                      : (editingUser.role === 'admin' ? 'Administrative Title' : 'Department')}
                   </label>
                   <input
                     type="text"
@@ -2716,7 +2939,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Phone Number
+                    {lang === 'as' ? 'ফোন নম্বৰ' : 'Phone Number'}
                   </label>
                   <input
                     type="text"
@@ -2729,7 +2952,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Email Address
+                    {lang === 'as' ? 'ইমেইল ঠিকনা' : 'Email Address'}
                   </label>
                   <input
                     type="email"
@@ -2743,13 +2966,15 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  {editingUser.role === 'admin' ? 'Change Admin Password (Leave blank to keep existing)' : 'Reset Password (Leave blank to keep existing)'}
+                  {lang === 'as'
+                    ? (editingUser.role === 'admin' ? 'নতুন এডমিন পাছৱৰ্ড (অপৰিৱৰ্তিত ৰাখিবলৈ খালী এৰক)' : 'পাছৱৰ্ড সলনি কৰক (অপৰিৱৰ্তিত ৰাখিবলৈ খালী এৰক)')
+                    : (editingUser.role === 'admin' ? 'Change Admin Password (Leave blank to keep existing)' : 'Reset Password (Leave blank to keep existing)')}
                 </label>
                 <input
                   type="text"
                   value={editingUser.password || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
-                  placeholder={editingUser.role === 'admin' ? 'Enter new admin password' : 'Enter new password if changing'}
+                  placeholder={editingUser.role === 'admin' ? (lang === 'as' ? 'নতুন এডমিন পাছৱৰ্ড লিখক' : 'Enter new admin password') : (lang === 'as' ? 'নতুন পাছৱৰ্ড লিখক' : 'Enter new password if changing')}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 font-mono"
                 />
               </div>
@@ -2764,7 +2989,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                     className="w-4 h-4 rounded text-emerald-600"
                   />
                   <label htmlFor="edit_is_active" className="font-bold text-slate-700 cursor-pointer">
-                    Portal Access Enabled (Active Account)
+                    {lang === 'as' ? 'প’ৰ্টেল প্ৰৱেশাধিকাৰ সক্ৰিয় (Active Account)' : 'Portal Access Enabled (Active Account)'}
                   </label>
                 </div>
               )}
@@ -2775,13 +3000,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   onClick={() => setEditUserModalOpen(false)}
                   className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
                 >
-                  Cancel
+                  {lang === 'as' ? 'বাতিল' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
                 >
-                  Save Profile Changes
+                  {lang === 'as' ? 'প্ৰফাইল সংৰক্ষণ কৰক' : 'Save Profile Changes'}
                 </button>
               </div>
             </form>
@@ -2792,12 +3017,12 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       {/* ================= MODAL: EDIT ROSTER ENTRY ================= */}
       {editRosterModalOpen && editingRoster && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl">
+          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between pb-3 border-b border-slate-200">
               <div className="flex items-center space-x-2">
                 <Edit3 className="w-5 h-5 text-purple-600" />
                 <h4 className="text-base font-extrabold text-slate-900">
-                  Edit Pre-Admission Roster Entry
+                  {lang === 'as' ? 'ভৰ্তি ৰোষ্টাৰ প্ৰৱিষ্টি সম্পাদনা' : 'Edit Pre-Admission Roster Entry'}
                 </h4>
               </div>
               <button
@@ -2811,7 +3036,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
             <form onSubmit={handleSaveEditRoster} className="mt-4 space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Admission Roll No.
+                  {lang === 'as' ? 'ভৰ্তি ৰোল নম্বৰ' : 'Admission Roll No.'}
                 </label>
                 <input
                   type="text"
@@ -2823,7 +3048,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Student Full Name
+                  {lang === 'as' ? 'শিক্ষাৰ্থীৰ সম্পূৰ্ণ নাম' : 'Student Full Name'}
                 </label>
                 <input
                   type="text"
@@ -2836,7 +3061,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Academic Department
+                  {lang === 'as' ? 'শৈক্ষিক বিভাগ' : 'Academic Department'}
                 </label>
                 <input
                   type="text"
@@ -2849,7 +3074,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Phone Number
+                  {lang === 'as' ? 'ফোন নম্বৰ' : 'Phone Number'}
                 </label>
                 <input
                   type="text"
@@ -2868,7 +3093,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   className="w-4 h-4 rounded text-purple-600"
                 />
                 <label htmlFor="edit_roster_claimed" className="font-bold text-slate-700 cursor-pointer">
-                  Marked as Claimed / Registered
+                  {lang === 'as' ? 'পঞ্জীয়ন সম্পন্ন বুলি চিহ্নিত (Claimed Account)' : 'Marked as Claimed / Registered'}
                 </label>
               </div>
 
@@ -2878,13 +3103,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   onClick={() => setEditRosterModalOpen(false)}
                   className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
                 >
-                  Cancel
+                  {lang === 'as' ? 'বাতিল' : 'Cancel'}
                 </button>
                 <button
                   type="submit"
                   className="px-4 py-2 rounded-xl font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/30 transition-all cursor-pointer"
                 >
-                  Save Roster Entry
+                  {lang === 'as' ? 'ৰোষ্টাৰ সংৰক্ষণ কৰক' : 'Save Roster Entry'}
                 </button>
               </div>
             </form>
@@ -2924,7 +3149,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 }}
                 className="px-4 py-2 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white shadow-md shadow-rose-600/30 transition-all cursor-pointer"
               >
-                {confirmModal.confirmText || 'Confirm'}
+                {confirmModal.confirmText || (lang === 'as' ? 'নিশ্চিত কৰক' : 'Confirm')}
               </button>
             </div>
           </div>

@@ -22,17 +22,18 @@ router.get('/', (req, res) => {
     let breachedCount = 0;
 
     issues.forEach(i => {
-      if (i.slaDeadline) {
-        const deadline = new Date(i.slaDeadline).getTime();
-        if (i.status === 'resolved' && i.resolvedAt) {
-          const resolvedTime = new Date(i.resolvedAt).getTime();
-          if (resolvedTime <= deadline) onTimeCount++;
-          else breachedCount++;
-        } else if (now > deadline) {
-          breachedCount++;
-        } else {
-          onTimeCount++;
-        }
+      const createdTime = i.createdAt ? new Date(i.createdAt).getTime() : now;
+      const slaHours = Number(i.slaHours) || (i.priority === 'critical' ? 2 : i.priority === 'high' ? 6 : i.priority === 'low' ? 48 : 24);
+      const deadline = i.slaDeadline ? new Date(i.slaDeadline).getTime() : createdTime + (slaHours * 3600 * 1000);
+
+      if (i.status === 'resolved' || i.status === 'closed') {
+        const resolvedTime = i.resolvedAt ? new Date(i.resolvedAt).getTime() : (createdTime + (slaHours * 0.4 * 3600 * 1000));
+        if (resolvedTime <= deadline) onTimeCount++;
+        else breachedCount++;
+      } else if (now > deadline) {
+        breachedCount++;
+      } else {
+        onTimeCount++;
       }
     });
 

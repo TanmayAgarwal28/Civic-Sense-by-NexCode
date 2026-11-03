@@ -80,7 +80,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 }`}
               >
                 <Wrench className="w-3.5 h-3.5 text-amber-300" />
-                <span>My Assigned Dispatches</span>
+                <span>{lang === 'as' ? 'মোৰ কাৰ্য্যসূচী' : 'My Assigned Dispatches'}</span>
               </button>
             )}
 
@@ -118,7 +118,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                   }`}
                 >
                   <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                  <span>Admin Command Center</span>
+                  <span>{lang === 'as' ? 'প্ৰশাসক কনচোল' : 'Admin Console'}</span>
                 </button>
 
                 <button
@@ -130,7 +130,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                   }`}
                 >
                   <Database className="w-4 h-4 text-emerald-400" />
-                  <span>Live Database</span>
+                  <span>{lang === 'as' ? 'প্ৰত্যক্ষ ডাটাবেচ' : 'Live Database'}</span>
                 </button>
               </>
             )}
@@ -188,7 +188,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 className="flex items-center space-x-2 px-4 sm:px-5 py-2 sm:py-2.5 rounded-xl text-xs font-bold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-lg shadow-emerald-900/30 transition-all cursor-pointer"
               >
                 <LogIn className="w-4 h-4" />
-                <span>Sign In</span>
+                <span>{lang === 'as' ? 'প্ৰৱেশ কৰক' : 'Sign In'}</span>
               </button>
             )}
 
@@ -231,7 +231,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
               >
                 <span className="flex items-center space-x-2">
                   <Wrench className="w-3.5 h-3.5 text-amber-300" />
-                  <span>My Assigned Dispatches</span>
+                  <span>{lang === 'as' ? 'মোৰ কাৰ্য্যসূচী' : 'My Assigned Dispatches'}</span>
                 </span>
                 <span>🔧</span>
               </button>
@@ -267,7 +267,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 >
                   <span className="flex items-center space-x-2">
                     <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>Admin Command Center</span>
+                    <span>{lang === 'as' ? 'প্ৰশাসক কনচোল' : 'Admin Console'}</span>
                   </span>
                   <span>🛡️</span>
                 </button>
@@ -280,7 +280,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 >
                   <span className="flex items-center space-x-2">
                     <Database className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>Live Database</span>
+                    <span>{lang === 'as' ? 'প্ৰত্যক্ষ ডাটাবেচ' : 'Live Database'}</span>
                   </span>
                   <span>🗄️</span>
                 </button>
@@ -294,7 +294,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
             className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md"
           >
             <PhoneCall className="w-3.5 h-3.5" />
-            <span>Campus Emergency SOS 24x7</span>
+            <span>{lang === 'as' ? 'চৌহদ জৰুৰীকালীন SOS ২৪x৭' : 'Campus Emergency SOS 24x7'}</span>
           </button>
         </div>
       )}

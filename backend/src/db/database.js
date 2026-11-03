@@ -55,11 +55,11 @@ export function readDatabase() {
     }
 
     return {
-      issues: data.issues || INITIAL_ISSUES,
-      users: data.users || INITIAL_USERS,
-      studentRoster: data.studentRoster || INITIAL_STUDENT_ROSTER,
-      categories: data.categories || INITIAL_CATEGORIES,
-      locations: data.locations || INITIAL_LOCATIONS,
+      issues: (Array.isArray(data.issues) && data.issues.length > 0) ? data.issues : INITIAL_ISSUES,
+      users: (Array.isArray(data.users) && data.users.length > 0) ? data.users : INITIAL_USERS,
+      studentRoster: (Array.isArray(data.studentRoster) && data.studentRoster.length > 0) ? data.studentRoster : INITIAL_STUDENT_ROSTER,
+      categories: (Array.isArray(data.categories) && data.categories.length > 0) ? data.categories : INITIAL_CATEGORIES,
+      locations: (Array.isArray(data.locations) && data.locations.length > 0) ? data.locations : INITIAL_LOCATIONS,
       settings: data.settings || INITIAL_SETTINGS
     };
   } catch (err) {

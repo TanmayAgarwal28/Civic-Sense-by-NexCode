@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { submitIssue, preCheckTriage, fetchCategories, fetchLocations } from '../api.js';
 import { AssameseKeyboardHelper } from './AssameseKeyboardHelper.jsx';
-import { Sparkles, Image as ImageIcon, Mic, MapPin, Send, AlertCircle, Home, CheckCircle2, RefreshCw } from 'lucide-react';
+import { quickTranslateText, isAssameseText } from '../utils/bilingualTranslator.js';
+import { Sparkles, Image as ImageIcon, Mic, MapPin, Send, AlertCircle, Home, CheckCircle2, RefreshCw, Languages } from 'lucide-react';
 
 export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
   const { lang, t } = useLanguage();
@@ -166,9 +167,20 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
 
     try {
       setLoading(true);
+      const isAs = isAssameseText(title + ' ' + description);
+      const titleEn = preCheckData?.translations?.titleEn || (isAs ? quickTranslateText(title, 'en') : title);
+      const titleAs = preCheckData?.translations?.titleAs || (isAs ? title : quickTranslateText(title, 'as'));
+      const descriptionEn = preCheckData?.translations?.descriptionEn || (isAs ? quickTranslateText(description, 'en') : description);
+      const descriptionAs = preCheckData?.translations?.descriptionAs || (isAs ? description : quickTranslateText(description, 'as'));
+
       const fd = new FormData();
       fd.append('title', title);
+      fd.append('titleEn', titleEn);
+      fd.append('titleAs', titleAs);
       fd.append('description', description);
+      fd.append('descriptionEn', descriptionEn);
+      fd.append('descriptionAs', descriptionAs);
+      fd.append('originalLanguage', isAs ? 'as' : 'en');
       fd.append('address', address);
       fd.append('location', location || 'Campus Premises');
       fd.append('zoneId', zoneId);
@@ -337,6 +349,70 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
             Provide specific room number, floor, or nearby building pillar so workers can reach the spot instantly.
           </p>
         </div>
+
+        {/* Real-time Bilingual Preview Box */}
+        {(title.trim() || description.trim()) && (() => {
+          const isAs = isAssameseText(title + ' ' + description);
+          const currentTitleEn = preCheckData?.translations?.titleEn || (isAs ? quickTranslateText(title, 'en') : title);
+          const currentTitleAs = preCheckData?.translations?.titleAs || (isAs ? title : quickTranslateText(title, 'as'));
+          const currentDescEn = preCheckData?.translations?.descriptionEn || (isAs ? quickTranslateText(description, 'en') : description);
+          const currentDescAs = preCheckData?.translations?.descriptionAs || (isAs ? description : quickTranslateText(description, 'as'));
+
+          return (
+            <div className="rounded-2xl border border-indigo-200/90 bg-gradient-to-br from-indigo-50/70 via-white to-emerald-50/50 p-4 shadow-sm animate-fadeIn">
+              <div className="flex items-center justify-between pb-2 border-b border-indigo-100 mb-3">
+                <div className="flex items-center space-x-2 text-xs font-bold text-indigo-950">
+                  <Languages className="w-4 h-4 text-indigo-600" />
+                  <span>
+                    {lang === 'as' ? 'দ্বিভাষিক অনুবাদ (একত্ৰে ইংৰাজী আৰু অসমীয়া)' : 'Bilingual Dual Output (English + Assamese Together)'}
+                  </span>
+                </div>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">
+                  ✓ Auto-Synced
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                {/* English Box */}
+                <div className="bg-white p-3 rounded-xl border border-slate-200 shadow-2xs">
+                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-emerald-700 uppercase tracking-wider mb-1.5">
+                    <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 border border-emerald-200">EN</span>
+                    <span>English Version</span>
+                  </div>
+                  <div className="font-bold text-slate-900 text-xs mb-1">
+                    {currentTitleEn || 'Drafting Title...'}
+                  </div>
+                  <div className="text-[11px] text-slate-600 line-clamp-3 leading-relaxed">
+                    {currentDescEn || 'Drafting details...'}
+                  </div>
+                </div>
+
+                {/* Assamese Box */}
+                <div className="bg-amber-50/70 p-3 rounded-xl border border-amber-200 shadow-2xs font-assamese">
+                  <div className="flex items-center space-x-1.5 text-[10px] font-bold text-amber-800 uppercase tracking-wider mb-1.5">
+                    <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-900 border border-amber-300">অসমীয়া</span>
+                    <span>অসমীয়া সংস্কৰণ</span>
+                  </div>
+                  <div className="font-bold text-slate-900 text-xs mb-1">
+                    {currentTitleAs || 'শিৰোনাম প্ৰস্তুত হৈছে...'}
+                  </div>
+                  <div className="text-[11px] text-slate-700 line-clamp-3 leading-relaxed">
+                    {currentDescAs || 'অভিযোগৰ বিৱৰণ প্ৰস্তুত হৈছে...'}
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-slate-500 mt-2.5 flex items-center gap-1">
+                <span>ℹ️</span>
+                <span>
+                  {lang === 'as'
+                    ? 'আপুনি যিকোনো ভাষাত লিখিলেও কৰ্মী, প্ৰশাসক আৰু ছাত্ৰসকলে ইংৰাজী আৰু অসমীয়া দুয়োটা সংস্কৰণ একেলগে চাব পাৰিব।'
+                    : 'Grievance is auto-stored in both English and Assamese so workers and admins can inspect either or both languages together.'}
+                </span>
+              </p>
+            </div>
+          );
+        })()}
 
         {/* Location & Dynamic Category Dropdowns */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

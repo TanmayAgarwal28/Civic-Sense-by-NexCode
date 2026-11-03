@@ -165,6 +165,216 @@ export const INITIAL_USERS = [
   }
 ];
 
-export const INITIAL_ISSUES = [];
+export const INITIAL_ISSUES = [
+  {
+    id: 'iss_seed_01',
+    ticketId: 'CS-2026-1001',
+    title: 'Water pipe leakage and dampness near electric switchboard in Hostel 4',
+    titleEn: 'Water pipe leakage and dampness near electric switchboard in Hostel 4',
+    titleAs: 'হোষ্টেল ৪-ৰ ৩য় মহলাত পানীৰ পাইপ ফাটিছে আৰু চুইচবৰ্ডত পানী পৰিছে',
+    description: 'Severe water leak from the 2nd floor bathroom pipe leaking into electrical fixtures. High risk of electrical short circuit and fire.',
+    descriptionEn: 'Severe water leak from the 2nd floor bathroom pipe leaking into electrical fixtures. High risk of electrical short circuit and fire.',
+    descriptionAs: 'হোষ্টেল ৪-ৰ বাথৰুমৰ পাইপ ফাটি পানী বিজুলীৰ চুইচবৰ্ডৰ কাষলৈ বৈ গৈছে। যিকোনো মুহূৰ্তত শ্বৰ্ট চাৰ্কিট আৰু অগ্নিসংযোগৰ আশংকা।',
+    address: 'Boys Hostel 4, 2nd Floor, Corridor near Room 204',
+    location: 'Boys Hostels (Hostels 1-5)',
+    zoneId: 'hostel_boys',
+    category: 'water',
+    categoryName: 'Water Supply & Plumbing',
+    department: 'Water Works & Sanitation',
+    priority: 'critical',
+    urgencyScore: 92,
+    status: 'in_progress',
+    slaHours: 2,
+    slaDeadline: new Date(Date.now() + 1.5 * 3600 * 1000).toISOString(),
+    reporterId: 'usr_stu_01',
+    reporterName: 'Demo Student One',
+    reporterRoll: 'ASU2026-101',
+    assignedWorkerId: 'usr_wrk_02',
+    assignedWorkerName: 'Demo Plumber (WRK-PLUMB01)',
+    upvotes: 6,
+    language: 'en',
+    originalLanguage: 'en',
+    createdAt: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+    timeline: [
+      {
+        id: 't_seed_01_1',
+        status: 'reported',
+        timestamp: new Date(Date.now() - 30 * 60 * 1000).toISOString(),
+        noteEn: 'Grievance lodged and prioritized by AI triage.',
+        noteAs: 'এআই তদাৰকীৰ দ্বাৰা অভিযোগ নথিভুক্ত আৰু অগ্ৰাধিকাৰ নিৰ্ধাৰণ কৰা হ’ল।'
+      },
+      {
+        id: 't_seed_01_2',
+        status: 'in_progress',
+        timestamp: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+        noteEn: 'Assigned to plumbing crew WRK-PLUMB01 for emergency isolation.',
+        noteAs: 'জৰুৰীকালীন মেৰামতিৰ বাবে প্লাম্বাৰ দলক দায়িত্ব প্ৰদান কৰা হৈছে।'
+      }
+    ]
+  },
+  {
+    id: 'iss_seed_02',
+    ticketId: 'CS-2026-1002',
+    title: 'প্ৰধান শৈক্ষিক ভৱনৰ লেব ২০৪-ৰ বাহিৰত চুইচবৰ্ডত ফিৰিঙতি ওলাইছে',
+    titleEn: 'Electric switchboard sparking and smoke outside Lab 204 in Academic Complex',
+    titleAs: 'প্ৰধান শৈক্ষিক ভৱনৰ লেব ২০৪-ৰ বাহিৰত চুইচবৰ্ডত ফিৰিঙতি ওলাইছে',
+    description: 'কম্পিউটাৰ বিজ্ঞান লেব ২০৪-ৰ বাহিৰৰ চুইচবৰ্ডৰ পৰা ফিৰিঙতি ওলাইছে আৰু প্লাষ্টিক জ্বলা গোন্ধ ওলাইছে। অতি বিপজ্জনক অৱস্থা।',
+    descriptionEn: 'Electric sparking and burning plastic odor from corridor switchboard outside CS Lab 204. Extremely hazardous electrical condition.',
+    descriptionAs: 'কম্পিউটাৰ বিজ্ঞান লেব ২০৪-ৰ বাহিৰৰ চুইচবৰ্ডৰ পৰা ফিৰিঙতি ওলাইছে আৰু প্লাষ্টিক জ্বলা গোন্ধ ওলাইছে। অতি বিপজ্জনক অৱস্থা।',
+    address: 'Academic Block A, 2nd Floor, Outside CS Lab 204',
+    location: 'Academic Block A (Engineering)',
+    zoneId: 'academic_block_a',
+    category: 'electricity',
+    categoryName: 'Electricity & Lighting',
+    department: 'Electrical Maintenance',
+    priority: 'critical',
+    urgencyScore: 96,
+    status: 'reported',
+    slaHours: 2,
+    slaDeadline: new Date(Date.now() + 1.8 * 3600 * 1000).toISOString(),
+    reporterId: 'usr_stu_02',
+    reporterName: 'Demo Student Two',
+    reporterRoll: 'ASU2026-102',
+    assignedWorkerId: 'usr_wrk_01',
+    assignedWorkerName: 'Demo Electrician (WRK-ELEC01)',
+    upvotes: 9,
+    language: 'as',
+    originalLanguage: 'as',
+    createdAt: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+    timeline: [
+      {
+        id: 't_seed_02_1',
+        status: 'reported',
+        timestamp: new Date(Date.now() - 12 * 60 * 1000).toISOString(),
+        noteEn: 'Reported with critical urgency via bilingual Assamese voice/text portal.',
+        noteAs: 'দ্বিভাষিক পৰ্টেলৰ জৰিয়তে জৰুৰীকালীন অভিযোগ নথিভুক্ত কৰা হ’ল।'
+      }
+    ]
+  },
+  {
+    id: 'iss_seed_03',
+    ticketId: 'CS-2026-1003',
+    title: 'Central Library 3rd floor digital reference Wi-Fi router reboot required',
+    titleEn: 'Central Library 3rd floor digital reference Wi-Fi router reboot required',
+    titleAs: 'কেন্দ্ৰীয় গ্ৰন্থাগাৰৰ ৩য় মহলাৰ ডিজিটেল ৰেফাৰেন্স ৱাই-ফাই ৰাউটাৰ বিকল',
+    description: 'Students unable to access university e-journals and academic database due to router packet drops on 3rd floor.',
+    descriptionEn: 'Students unable to access university e-journals and academic database due to router packet drops on 3rd floor.',
+    descriptionAs: 'কেন্দ্ৰীয় গ্ৰন্থাগাৰৰ ৩য় মহলাত ৱাই-ফাই বিচ্ছিন্ন হৈ পৰাৰ বাবে ছাত্ৰ-ছাত্ৰীসকলে ই-জাৰ্নেল আৰু গৱেষণা তথ্যকোষ প্ৰৱেশ কৰিব পৰা নাই।',
+    address: 'Central Library, 3rd Floor Digital Reference Section',
+    location: 'Central Library & Digital Hub',
+    zoneId: 'central_library',
+    category: 'it_network',
+    categoryName: 'IT & Campus Wi-Fi',
+    department: 'Computer & Network Center',
+    priority: 'medium',
+    urgencyScore: 55,
+    status: 'in_progress',
+    slaHours: 24,
+    slaDeadline: new Date(Date.now() + 20 * 3600 * 1000).toISOString(),
+    reporterId: 'usr_stu_03',
+    reporterName: 'Demo Student Three',
+    reporterRoll: 'ASU2026-103',
+    assignedWorkerId: 'usr_wrk_03',
+    assignedWorkerName: 'Demo Network Technician (WRK-NET01)',
+    upvotes: 4,
+    language: 'en',
+    originalLanguage: 'en',
+    createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    timeline: [
+      {
+        id: 't_seed_03_1',
+        status: 'reported',
+        timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+        noteEn: 'Logged by library study group.',
+        noteAs: 'গ্ৰন্থাগাৰ অধ্যয়ন দলে অভিযোগ দাখিল কৰিছে।'
+      }
+    ]
+  },
+  {
+    id: 'iss_seed_04',
+    ticketId: 'CS-2026-1004',
+    title: 'কেণ্টিনৰ বাটৰ নলাৰ ঢাকনি ভাঙি বিপজ্জনক গাঁত হৈছে',
+    titleEn: 'Damaged drain slab causing hazardous pit on pathway near cafeteria',
+    titleAs: 'কেণ্টিনৰ বাটৰ নলাৰ ঢাকনি ভাঙি বিপজ্জনক গাঁত হৈছে',
+    description: 'ছাত্ৰ কেফেটেৰিয়াৰ সন্মুখৰ পথত কংক্ৰিটৰ নলাৰ ঢাকনি ভাঙি আছে। সন্ধিয়া পোহৰ কম থাকিলে ছাত্ৰ-ছাত্ৰী পিছলি পৰাৰ আশংকা।',
+    descriptionEn: 'Broken concrete drain cover on the pathway in front of student cafeteria. Risk of severe fall and injury at night.',
+    descriptionAs: 'ছাত্ৰ কেফেটেৰিয়াৰ সন্মুখৰ পথত কংক্ৰিটৰ নলাৰ ঢাকনি ভাঙি আছে। সন্ধিয়া পোহৰ কম থাকিলে ছাত্ৰ-ছাত্ৰী পিছলি পৰাৰ আশংকা।',
+    address: 'Pathway between Student Cafeteria and Sports Complex',
+    location: 'Main Campus Roads & Walkways',
+    zoneId: 'campus_pathways',
+    category: 'infrastructure',
+    categoryName: 'Infrastructure & Roads',
+    department: 'Civil Infrastructure',
+    priority: 'high',
+    urgencyScore: 78,
+    status: 'reported',
+    slaHours: 6,
+    slaDeadline: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
+    reporterId: 'usr_stu_04',
+    reporterName: 'Demo Student Four',
+    reporterRoll: 'ASU2026-104',
+    upvotes: 3,
+    language: 'as',
+    originalLanguage: 'as',
+    createdAt: new Date(Date.now() - 80 * 60 * 1000).toISOString(),
+    timeline: [
+      {
+        id: 't_seed_04_1',
+        status: 'reported',
+        timestamp: new Date(Date.now() - 80 * 60 * 1000).toISOString(),
+        noteEn: 'Hazard flagged for campus civil engineering team.',
+        noteAs: 'চৌহদৰ নিৰ্মাণ বিভাগলৈ তথ্য প্ৰেৰণ কৰা হৈছে।'
+      }
+    ]
+  },
+  {
+    id: 'iss_seed_05',
+    ticketId: 'CS-2026-1005',
+    title: 'Leaking RO drinking water cooler tap replaced in Girls Hostel 2',
+    titleEn: 'Leaking RO drinking water cooler tap replaced in Girls Hostel 2',
+    titleAs: 'ছাত্ৰীনিবাস ২-ৰ খোৱা পানীৰ আৰ’ ফিল্টাৰৰ পানী ওলোৱা টেপ সলনি কৰা হ’ল',
+    description: 'Continuous dripping from the main cold water tap caused water stagnation in the dining entrance.',
+    descriptionEn: 'Continuous dripping from the main cold water tap caused water stagnation in the dining entrance.',
+    descriptionAs: 'মূল খোৱা পানীৰ টেপৰ পৰা নিৰন্তৰ পানী নিগৰি ডাইনিং হলৰ প্ৰৱেশদ্বাৰত পানী জমা হৈ আছিল।',
+    address: 'Girls Hostel 2, 1st Floor Dining Hall Entrance',
+    location: 'Girls Hostels (Hostels 1-4)',
+    zoneId: 'hostel_girls',
+    category: 'water',
+    categoryName: 'Water Supply & Plumbing',
+    department: 'Water Works & Sanitation',
+    priority: 'low',
+    urgencyScore: 35,
+    status: 'resolved',
+    slaHours: 48,
+    slaDeadline: new Date(Date.now() + 36 * 3600 * 1000).toISOString(),
+    resolvedAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    resolutionNotes: 'Replaced damaged silicone seal and 0.5-inch tap cartridge. Tested with full tank pressure. Fully operational and verified clean.',
+    reporterId: 'usr_stu_01',
+    reporterName: 'Demo Student One',
+    reporterRoll: 'ASU2026-101',
+    assignedWorkerId: 'usr_wrk_02',
+    assignedWorkerName: 'Demo Plumber (WRK-PLUMB01)',
+    upvotes: 5,
+    language: 'en',
+    originalLanguage: 'en',
+    createdAt: new Date(Date.now() - 10 * 3600 * 1000).toISOString(),
+    timeline: [
+      {
+        id: 't_seed_05_1',
+        status: 'reported',
+        timestamp: new Date(Date.now() - 10 * 3600 * 1000).toISOString(),
+        noteEn: 'Maintenance request logged.',
+        noteAs: 'ৰক্ষণাবেক্ষণৰ আবেদন পঞ্জীয়ন হ’ল।'
+      },
+      {
+        id: 't_seed_05_2',
+        status: 'resolved',
+        timestamp: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+        noteEn: 'Repair certified by plumbing supervisor with photo proof.',
+        noteAs: 'প্লাম্বাৰ অধীক্ষকৰ দ্বাৰা মেৰামতি পৰীক্ষা আৰু সমাপ্ত ঘোষণা কৰা হ’ল।'
+      }
+    ]
+  }
+];
 
 export const INITIAL_SEED_ISSUES = INITIAL_ISSUES;

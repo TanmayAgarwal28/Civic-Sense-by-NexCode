@@ -1,9 +1,11 @@
 import React from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { MapPin, Clock, ThumbsUp, ChevronRight, ShieldAlert, CheckCircle2, Sparkles, AlertCircle, Link2 } from 'lucide-react';
 
 export function IssueCard({ issue, onSelect, onUpvote }) {
   const { lang, t } = useLanguage();
+  const bi = getIssueBilingual(issue);
 
   const isCritical = issue.priority === 'critical';
   const isHigh = issue.priority === 'high';
@@ -67,16 +69,26 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
             <span className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${getStatusBadgeClass()}`}>
               {getStatusText()}
             </span>
-            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-200 uppercase">
-              {issue.language === 'as' ? 'অসমীয়া' : 'EN'}
+            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-500/15 text-amber-800 border border-amber-300 uppercase">
+              Bilingual • দ্বিভাষিক
             </span>
           </div>
         </div>
 
-        {/* Issue Title */}
-        <h4 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug mb-2 font-assamese">
-          {issue.title}
-        </h4>
+        {/* Issue Title (Dual Language Support) */}
+        <div className="mb-2">
+          <h4 className="text-base font-bold text-slate-900 group-hover:text-emerald-700 transition-colors line-clamp-2 leading-snug">
+            {lang === 'as' ? bi.titleAs : bi.titleEn}
+          </h4>
+          <div className="flex items-center space-x-1.5 text-xs text-slate-500 font-medium mt-1">
+            <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-slate-100 text-slate-600 border border-slate-200 uppercase shrink-0">
+              {lang === 'as' ? 'EN' : 'অসমীয়া'}
+            </span>
+            <span className="truncate italic">
+              {lang === 'as' ? bi.titleEn : bi.titleAs}
+            </span>
+          </div>
+        </div>
 
         {/* Location & Department */}
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-slate-500 mb-2">
@@ -107,9 +119,9 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
           </div>
         )}
 
-        {/* Description Snippet */}
-        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed font-assamese mb-3">
-          {issue.description}
+        {/* Description Snippet (shows according to language) */}
+        <p className="text-xs text-slate-600 line-clamp-2 leading-relaxed mb-3">
+          {lang === 'as' ? bi.descriptionAs : bi.descriptionEn}
         </p>
 
         {/* Compound Hazard or Duplicate Banner */}

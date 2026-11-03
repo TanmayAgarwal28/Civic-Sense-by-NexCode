@@ -82,6 +82,7 @@ router.patch('/issues/:id/approve-dispatch', (req, res) => {
 router.get('/users', (req, res) => {
   try {
     const allUsers = getAllUsers().map(({ password, ...u }) => u);
+    const admin = allUsers.find(u => u.role === 'admin');
     const students = allUsers.filter(u => u.role === 'student');
     const workers = allUsers.filter(u => u.role === 'worker');
     const roster = getStudentRoster();
@@ -89,6 +90,7 @@ router.get('/users', (req, res) => {
     res.json({
       success: true,
       data: {
+        admin,
         students,
         workers,
         roster
@@ -198,6 +200,14 @@ router.patch('/users/:id', (req, res) => {
 // Admin deletes user profile
 router.delete('/users/:id', (req, res) => {
   try {
+    const user = getAllUsers().find(user => user.id === req.params.id);
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found or already deleted' });
+    }
+    if (user.role === 'admin') {
+      return res.status(403).json({ success: false, message: 'The administrator account cannot be deleted' });
+    }
+
     const deleted = deleteUser(req.params.id);
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'User not found or already deleted' });

@@ -55,6 +55,14 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
   // User Management State
   const [userData, setUserData] = useState({
+    admin: {
+      id: 'usr_admin_01',
+      username: 'CampusAdminX1',
+      name: 'Chief Campus Administrator',
+      role: 'admin',
+      email: 'admin@example.invalid',
+      phone: '0000000000'
+    },
     students: [
       { id: 'usr_stu_01', rollNo: 'ASU2026-101', name: 'Demo Student One', department: 'Computer Science', phone: '0000000000', isActive: true },
       { id: 'usr_stu_02', rollNo: 'ASU2026-102', name: 'Demo Student Two', department: 'Physics & Astronomy', phone: '0000000000', isActive: true },
@@ -206,16 +214,36 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           ...prev,
           students: prev.students.map(s => s.id === editingUser.id ? { ...s, ...editingUser } : s)
         };
-      } else {
+      } else if (role === 'worker') {
         return {
           ...prev,
           workers: prev.workers.map(w => w.id === editingUser.id ? { ...w, ...editingUser } : w)
         };
+      } else if (role === 'admin') {
+        return {
+          ...prev,
+          admin: { ...prev.admin, ...editingUser }
+        };
       }
+      return prev;
     });
 
+    // If currently logged in user is this admin, update localStorage session
+    try {
+      const current = JSON.parse(localStorage.getItem('civicsense_current_user') || '{}');
+      if (current && current.id === editingUser.id) {
+        localStorage.setItem('civicsense_current_user', JSON.stringify({
+          ...current,
+          name: editingUser.name,
+          username: editingUser.username,
+          email: editingUser.email,
+          phone: editingUser.phone
+        }));
+      }
+    } catch (e) {}
+
     setEditUserModalOpen(false);
-    showToast(`${role === 'student' ? 'Student' : 'Worker'} profile updated successfully.`);
+    showToast(`${role === 'admin' ? 'Administrator ID & Password' : role === 'student' ? 'Student' : 'Worker'} profile updated successfully.`);
 
     try {
       await updateUserAdmin(editingUser.id, editingUser);
@@ -226,11 +254,11 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
     }
   };
 
-  // Handle Delete User (Student or Worker)
+  // Handle Delete User (Admin, Student or Worker)
   const handleDeleteUser = (user) => {
     setConfirmModal({
       open: true,
-      title: `Delete ${user.role === 'student' ? 'Student' : 'Worker'} Profile`,
+      title: `Delete ${user.role === 'admin' ? 'Administrator' : user.role === 'student' ? 'Student' : 'Worker'} Profile`,
       message: `Are you sure you want to permanently delete "${user.name}" (${user.rollNo || user.username}) from the database? This cannot be undone.`,
       confirmText: 'Delete Permanently',
       onConfirm: async () => {
@@ -238,7 +266,8 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
         setUserData(prev => ({
           ...prev,
           students: prev.students.filter(s => s.id !== user.id),
-          workers: prev.workers.filter(w => w.id !== user.id)
+          workers: prev.workers.filter(w => w.id !== user.id),
+          admin: prev.admin?.id === user.id ? null : prev.admin
         }));
         showToast(`User ${user.name} removed permanently.`);
 
@@ -977,6 +1006,49 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 <Plus className="w-3.5 h-3.5" />
                 <span>+ Create Worker Account</span>
               </button>
+            </div>
+          </div>
+
+          {/* Administrator profile card */}
+          <div className="bg-gradient-to-r from-indigo-900 via-indigo-950 to-slate-900 rounded-2xl p-4 sm:p-5 border border-indigo-700/60 shadow-lg text-white flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="flex items-center space-x-3.5">
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/50 flex items-center justify-center text-xl flex-shrink-0">
+                🛡️
+              </div>
+              <div>
+                <div className="flex items-center space-x-2">
+                  <h4 className="font-extrabold text-white text-base">
+                    {userData.admin?.name || 'Chief Campus Administrator'}
+                  </h4>
+                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-indigo-500/30 text-indigo-300 border border-indigo-500/40">
+                    Master Administrator Profile
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-3 mt-1 text-xs text-indigo-200">
+                  <div>
+                    Admin Login ID: <code className="bg-indigo-950 px-2 py-0.5 rounded border border-indigo-700/60 font-mono font-bold text-amber-300">{userData.admin?.username || 'CampusAdminX1'}</code>
+                  </div>
+                  <span>•</span>
+                  <div>
+                    Password: <span className="font-mono text-indigo-300">•••••••• (Fully Editable)</span>
+                  </div>
+                  <span>•</span>
+                  <div className="text-slate-300">
+                    {userData.admin?.email || 'admin@example.invalid'}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => handleEditUser(userData.admin || { id: 'usr_admin_01', username: 'CampusAdminX1', role: 'admin', name: 'Chief Campus Administrator', email: 'admin@example.invalid', phone: '0000000000' })}
+                className="px-4 py-2 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white shadow-md shadow-indigo-600/40 flex items-center space-x-1.5 cursor-pointer transition-all"
+              >
+                <Edit3 className="w-3.5 h-3.5 text-indigo-200" />
+                <span>Edit Admin ID & Password</span>
+              </button>
+
             </div>
           </div>
 
@@ -2002,26 +2074,22 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
                         {/* Actions on this entry */}
                         <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
-                          {user.role !== 'admin' ? (
-                            <>
-                              <button
-                                onClick={() => handleEditUser(user)}
-                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition-all cursor-pointer flex items-center space-x-1"
-                              >
-                                <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
-                                <span>Edit Profile</span>
-                              </button>
+                          <button
+                            onClick={() => handleEditUser(user)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition-all cursor-pointer flex items-center space-x-1"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>{user.role === 'admin' ? 'Edit Admin ID & Password' : 'Edit Profile'}</span>
+                          </button>
 
-                              <button
-                                onClick={() => handleDeleteUser(user)}
-                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
-                              >
-                                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
-                                <span>Delete User</span>
-                              </button>
-                            </>
-                          ) : (
-                            <span className="text-[11px] text-slate-500 italic">Master Administrator (Protected)</span>
+                          {user.role !== 'admin' && (
+                            <button
+                              onClick={() => handleDeleteUser(user)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
+                            >
+                              <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                              <span>Delete</span>
+                            </button>
                           )}
                         </div>
                       </div>
@@ -2586,7 +2654,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               <div className="flex items-center space-x-2">
                 <Edit3 className="w-5 h-5 text-indigo-600" />
                 <h4 className="text-base font-extrabold text-slate-900">
-                  Edit {editingUser.role === 'student' ? 'Student' : 'Worker'} Profile
+                  Edit {editingUser.role === 'student' ? 'Student' : editingUser.role === 'admin' ? 'Administrator' : 'Worker'} Profile
                 </h4>
               </div>
               <button
@@ -2614,7 +2682,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    {editingUser.role === 'student' ? 'Admission Roll No.' : 'Worker ID'}
+                    {editingUser.role === 'student' ? 'Admission Roll No.' : editingUser.role === 'admin' ? 'Admin Username / ID' : 'Worker ID'}
                   </label>
                   <input
                     type="text"
@@ -2634,7 +2702,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
                 <div>
                   <label className="block font-bold text-slate-700 mb-1">
-                    Department
+                    {editingUser.role === 'admin' ? 'Administrative Title' : 'Department'}
                   </label>
                   <input
                     type="text"
@@ -2675,13 +2743,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
               <div>
                 <label className="block font-bold text-slate-700 mb-1">
-                  Reset Password (Leave blank to keep existing)
+                  {editingUser.role === 'admin' ? 'Change Admin Password (Leave blank to keep existing)' : 'Reset Password (Leave blank to keep existing)'}
                 </label>
                 <input
                   type="text"
                   value={editingUser.password || ''}
                   onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
-                  placeholder="Enter new password if changing"
+                  placeholder={editingUser.role === 'admin' ? 'Enter new admin password' : 'Enter new password if changing'}
                   className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 font-mono"
                 />
               </div>

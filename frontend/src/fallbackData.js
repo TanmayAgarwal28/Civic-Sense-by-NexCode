@@ -25,6 +25,15 @@ export const FALLBACK_LOCATIONS = [
 ];
 
 export const FALLBACK_USERS = {
+  admin: {
+    id: 'usr_admin_01',
+    username: 'CampusAdminX1',
+    name: 'Chief Campus Administrator',
+    role: 'admin',
+    email: 'admin@example.invalid',
+    phone: '0000000000',
+    isActive: true
+  },
   students: [
     { id: 'usr_stu_01', rollNo: 'ASU2026-101', name: 'Demo Student One', department: 'Computer Science', phone: '0000000000', isActive: true },
     { id: 'usr_stu_02', rollNo: 'ASU2026-102', name: 'Demo Student Two', department: 'Physics & Astronomy', phone: '0000000000', isActive: true },

@@ -263,7 +263,7 @@ export function updateUser(userId, updates) {
 export function deleteUser(userId) {
   const store = readDatabase();
   const user = store.users.find(u => u.id === userId);
-  if (!user) return false;
+  if (!user || user.role === 'admin') return false;
   // If user is a student, set their corresponding roster entry back to unclaimed
   if (user.role === 'student' && (user.rollNo || user.username)) {
     const roll = (user.rollNo || user.username).toLowerCase();

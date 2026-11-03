@@ -1,0 +1,19 @@
+# Dependencies and build output
+node_modules/
+frontend/dist/
+backend/dist/
+
+# Local environment and runtime data
+.env
+.env.*
+!.env.example
+backend/data/issues.json
+backend/data/issues.json.tmp
+backend/uploads/*
+!backend/uploads/.gitkeep
+
+# Local editor and operating-system files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

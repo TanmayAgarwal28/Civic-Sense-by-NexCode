@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { 
   ShieldAlert, Globe, Bell, UserCheck, ShieldCheck, 
-  Wrench, GraduationCap, PhoneCall, Sparkles, LogIn, LogOut, Menu, X 
+  Wrench, GraduationCap, PhoneCall, Sparkles, LogIn, LogOut, Menu, X, Database 
 } from 'lucide-react';
 
 export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab, setActiveTab }) {
@@ -108,17 +108,31 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
 
             {/* Admin Dashboard Tab (Admin only) */}
             {currentUser?.role === 'admin' && (
-              <button
-                onClick={() => setActiveTab('admin')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                  activeTab === 'admin'
-                    ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                    : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-                }`}
-              >
-                <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                <span>Admin Command Center</span>
-              </button>
+              <>
+                <button
+                  onClick={() => setActiveTab('admin')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    activeTab === 'admin'
+                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+                  }`}
+                >
+                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
+                  <span>Admin Command Center</span>
+                </button>
+
+                <button
+                  onClick={() => setActiveTab('database')}
+                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
+                    activeTab === 'database'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+                  }`}
+                >
+                  <Database className="w-4 h-4 text-emerald-400" />
+                  <span>Live Database</span>
+                </button>
+              </>
             )}
           </nav>
 
@@ -244,18 +258,33 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
             </button>
 
             {currentUser?.role === 'admin' && (
-              <button
-                onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
-                  activeTab === 'admin' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
-                }`}
-              >
-                <span className="flex items-center space-x-2">
-                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                  <span>Admin Command Center</span>
-                </span>
-                <span>🛡️</span>
-              </button>
+              <>
+                <button
+                  onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                    activeTab === 'admin' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="flex items-center space-x-2">
+                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Admin Command Center</span>
+                  </span>
+                  <span>🛡️</span>
+                </button>
+
+                <button
+                  onClick={() => { setActiveTab('database'); setMobileMenuOpen(false); }}
+                  className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                    activeTab === 'database' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
+                  }`}
+                >
+                  <span className="flex items-center space-x-2">
+                    <Database className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Live Database</span>
+                  </span>
+                  <span>🗄️</span>
+                </button>
+              </>
             )}
           </div>
 

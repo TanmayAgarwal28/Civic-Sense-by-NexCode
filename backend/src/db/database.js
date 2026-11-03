@@ -237,6 +237,46 @@ export function updateUserPassword(userId, newPassword) {
   return true;
 }
 
+export function updateUser(userId, updates) {
+  const store = readDatabase();
+  const index = store.users.findIndex(u => u.id === userId);
+  if (index === -1) return null;
+
+  const existing = store.users[index];
+  const updated = {
+    ...existing,
+    ...updates,
+    id: existing.id
+  };
+  if (updated.role === 'student' && updates.rollNo) {
+    updated.username = updates.rollNo;
+  }
+  // If password was empty or not provided, preserve existing
+  if (!updates.password) {
+    updated.password = existing.password;
+  }
+  store.users[index] = updated;
+  saveDatabase(store);
+  return updated;
+}
+
+export function deleteUser(userId) {
+  const store = readDatabase();
+  const user = store.users.find(u => u.id === userId);
+  if (!user) return false;
+  // If user is a student, set their corresponding roster entry back to unclaimed
+  if (user.role === 'student' && (user.rollNo || user.username)) {
+    const roll = (user.rollNo || user.username).toLowerCase();
+    const roster = store.studentRoster.find(r => r.rollNo.toLowerCase() === roll);
+    if (roster) {
+      roster.isClaimed = false;
+    }
+  }
+  store.users = store.users.filter(u => u.id !== userId);
+  saveDatabase(store);
+  return true;
+}
+
 // ----------------- ROSTER -----------------
 export function getStudentRoster() {
   return readDatabase().studentRoster;
@@ -252,6 +292,28 @@ export function addRosterEntry(entry) {
   });
   saveDatabase(store);
   return true;
+}
+
+export function updateRosterEntry(rollNo, updates) {
+  const store = readDatabase();
+  const cleanRoll = rollNo.trim().toLowerCase();
+  const index = store.studentRoster.findIndex(r => r.rollNo.trim().toLowerCase() === cleanRoll);
+  if (index === -1) return null;
+  store.studentRoster[index] = {
+    ...store.studentRoster[index],
+    ...updates
+  };
+  saveDatabase(store);
+  return store.studentRoster[index];
+}
+
+export function deleteRosterEntry(rollNo) {
+  const store = readDatabase();
+  const cleanRoll = rollNo.trim().toLowerCase();
+  const initialLen = store.studentRoster.length;
+  store.studentRoster = store.studentRoster.filter(r => r.rollNo.trim().toLowerCase() !== cleanRoll);
+  saveDatabase(store);
+  return store.studentRoster.length < initialLen;
 }
 
 // ----------------- CATEGORIES -----------------
@@ -317,6 +379,21 @@ export function resetDatabase() {
   const defaultData = getDefaultStore();
   saveDatabase(defaultData);
   return defaultData;
+}
+
+export function deleteDatabaseEntry(collection, id) {
+  if (collection === 'issues') {
+    return deleteIssue(id);
+  } else if (collection === 'users') {
+    return deleteUser(id);
+  } else if (collection === 'studentRoster') {
+    return deleteRosterEntry(id);
+  } else if (collection === 'categories') {
+    return deleteCategory(id);
+  } else if (collection === 'locations') {
+    return deleteLocation(id);
+  }
+  return false;
 }
 
 function getStatusNoteEn(status, notes) {

@@ -269,6 +269,19 @@ export default function App() {
               issues={issues}
               analytics={analytics}
               onRefresh={loadData}
+              initialAdminTab="triage"
+            />
+          </div>
+        )}
+
+        {/* Tab 6: Live Persistent Database Inspector */}
+        {activeTab === 'database' && (
+          <div className="animate-fadeIn">
+            <AdminDashboard
+              issues={issues}
+              analytics={analytics}
+              onRefresh={loadData}
+              initialAdminTab="database"
             />
           </div>
         )}

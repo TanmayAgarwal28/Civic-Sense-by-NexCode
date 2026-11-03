@@ -19,19 +19,25 @@ import {
   fetchAdminSettings, 
   updateAdminSettings, 
   fetchRawDatabase,
-  adminChangePassword
+  adminChangePassword,
+  updateUserAdmin,
+  deleteUserAdmin,
+  updateRosterAdmin,
+  deleteRosterAdmin,
+  deleteDatabaseEntryAdmin
 } from '../api.js';
 import { 
   ShieldCheck, AlertTriangle, Clock, CheckCircle2, FileText, 
   Download, RefreshCw, Printer, Copy, UserCheck, Wrench, Sparkles, 
   Filter, Trash2, Users, Database, Plus, ToggleLeft, ToggleRight, 
-  Settings as SettingsIcon, MapPin, Key, Compass, Navigation 
+  Settings as SettingsIcon, MapPin, Key, Compass, Navigation,
+  Edit3, Eye, Search, Code, Check, ExternalLink, HardDrive, Shield
 } from 'lucide-react';
 
-export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
+export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initialAdminTab = 'triage' }) {
   const { lang, t } = useLanguage();
 
-  const [activeAdminTab, setActiveAdminTab] = useState('triage'); // 'triage', 'users', 'categories', 'settings', 'database'
+  const [activeAdminTab, setActiveAdminTab] = useState(initialAdminTab); // 'triage', 'users', 'categories', 'settings', 'database'
 
   // Issues and Status update modal
   const [selectedIssue, setSelectedIssue] = useState(null);
@@ -112,6 +118,16 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
   // Database Viewer State
   const [rawDbData, setRawDbData] = useState(null);
   const [dbCollection, setDbCollection] = useState('issues');
+  const [dbSearchQuery, setDbSearchQuery] = useState('');
+  const [dbViewMode, setDbViewMode] = useState('visual'); // 'visual' | 'json'
+  const [dbUserRoleFilter, setDbUserRoleFilter] = useState('all'); // 'all' | 'student' | 'worker'
+
+  // User & Roster Edit Modals
+  const [editUserModalOpen, setEditUserModalOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState(null);
+  const [editRosterModalOpen, setEditRosterModalOpen] = useState(false);
+  const [editingRoster, setEditingRoster] = useState(null);
+
   const [toastMessage, setToastMessage] = useState('');
   const [confirmModal, setConfirmModal] = useState({
     open: false,
@@ -158,10 +174,157 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
   };
 
   useEffect(() => {
+    if (initialAdminTab) {
+      setActiveAdminTab(initialAdminTab);
+    }
+  }, [initialAdminTab]);
+
+  useEffect(() => {
     if (activeAdminTab === 'database') {
       loadRawDatabase();
     }
   }, [activeAdminTab]);
+
+  // Handle Edit User (Student or Worker)
+  const handleEditUser = (user) => {
+    setEditingUser({
+      ...user,
+      password: '' // leave blank unless admin wants to reset/change it
+    });
+    setEditUserModalOpen(true);
+  };
+
+  const handleSaveEditUser = async (e) => {
+    e.preventDefault();
+    if (!editingUser) return;
+    const role = editingUser.role;
+    
+    // Optimistically update local state
+    setUserData(prev => {
+      if (role === 'student') {
+        return {
+          ...prev,
+          students: prev.students.map(s => s.id === editingUser.id ? { ...s, ...editingUser } : s)
+        };
+      } else {
+        return {
+          ...prev,
+          workers: prev.workers.map(w => w.id === editingUser.id ? { ...w, ...editingUser } : w)
+        };
+      }
+    });
+
+    setEditUserModalOpen(false);
+    showToast(`${role === 'student' ? 'Student' : 'Worker'} profile updated successfully.`);
+
+    try {
+      await updateUserAdmin(editingUser.id, editingUser);
+      loadAdminData();
+      if (activeAdminTab === 'database') loadRawDatabase();
+    } catch (err) {
+      console.warn('Edit user error:', err);
+    }
+  };
+
+  // Handle Delete User (Student or Worker)
+  const handleDeleteUser = (user) => {
+    setConfirmModal({
+      open: true,
+      title: `Delete ${user.role === 'student' ? 'Student' : 'Worker'} Profile`,
+      message: `Are you sure you want to permanently delete "${user.name}" (${user.rollNo || user.username}) from the database? This cannot be undone.`,
+      confirmText: 'Delete Permanently',
+      onConfirm: async () => {
+        // Optimistic removal
+        setUserData(prev => ({
+          ...prev,
+          students: prev.students.filter(s => s.id !== user.id),
+          workers: prev.workers.filter(w => w.id !== user.id)
+        }));
+        showToast(`User ${user.name} removed permanently.`);
+
+        try {
+          await deleteUserAdmin(user.id);
+          loadAdminData();
+          if (activeAdminTab === 'database') loadRawDatabase();
+        } catch (err) {
+          console.warn('Delete user error:', err);
+        }
+      }
+    });
+  };
+
+  // Handle Edit Roster Entry
+  const handleEditRoster = (entry) => {
+    setEditingRoster({ ...entry });
+    setEditRosterModalOpen(true);
+  };
+
+  const handleSaveEditRoster = async (e) => {
+    e.preventDefault();
+    if (!editingRoster) return;
+
+    setUserData(prev => ({
+      ...prev,
+      roster: prev.roster.map(r => r.rollNo === editingRoster.rollNo ? editingRoster : r)
+    }));
+    setEditRosterModalOpen(false);
+    showToast(`Roster entry ${editingRoster.rollNo} updated.`);
+
+    try {
+      await updateRosterAdmin(editingRoster.rollNo, editingRoster);
+      loadAdminData();
+      if (activeAdminTab === 'database') loadRawDatabase();
+    } catch (err) {
+      console.warn('Edit roster error:', err);
+    }
+  };
+
+  // Handle Delete Roster Entry
+  const handleDeleteRoster = (entry) => {
+    setConfirmModal({
+      open: true,
+      title: 'Delete Pre-Admission Roster Entry',
+      message: `Are you sure you want to delete ${entry.rollNo} (${entry.name}) from the official pre-admission roster?`,
+      confirmText: 'Delete Roster',
+      onConfirm: async () => {
+        setUserData(prev => ({
+          ...prev,
+          roster: prev.roster.filter(r => r.rollNo !== entry.rollNo)
+        }));
+        showToast(`Roll No. ${entry.rollNo} deleted from roster.`);
+
+        try {
+          await deleteRosterAdmin(entry.rollNo);
+          loadAdminData();
+          if (activeAdminTab === 'database') loadRawDatabase();
+        } catch (err) {
+          console.warn('Delete roster error:', err);
+        }
+      }
+    });
+  };
+
+  // Handle Delete Any Entry directly from Database Inspector
+  const handleDeleteDbEntry = (collection, item, displayId) => {
+    const recordId = item.id || item.ticketId || item.rollNo;
+    setConfirmModal({
+      open: true,
+      title: `Delete Record from [${collection}]`,
+      message: `Are you sure you want to permanently delete record "${displayId || recordId}" from database collection "${collection}"? This will modify backend/data/issues.json immediately.`,
+      confirmText: 'Delete Record',
+      onConfirm: async () => {
+        showToast(`Record ${displayId || recordId} deleted from ${collection}.`);
+        try {
+          await deleteDatabaseEntryAdmin(collection, recordId);
+          loadRawDatabase();
+          loadAdminData();
+          if (onRefresh) onRefresh();
+        } catch (err) {
+          console.warn('Delete DB record error:', err);
+        }
+      }
+    });
+  };
 
   // Handle Delete Issue (100% Optimistic & Safe)
   const handleDeleteIssue = async (id, ticketId) => {
@@ -817,11 +980,11 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
             </div>
           </div>
 
-          {/* Student List with ON/OFF Switch */}
+          {/* Student List with Edit, ON/OFF Switch & Delete */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center justify-between">
               <span>Registered Students ({userData.students.length})</span>
-              <span className="text-[11px] text-slate-400 font-normal">Use the toggle button to grant or revoke portal access</span>
+              <span className="text-[11px] text-slate-400 font-normal">Full control: Edit profiles, toggle access ON/OFF, or permanently delete accounts</span>
             </div>
 
             <div className="overflow-x-auto">
@@ -833,12 +996,12 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
                     <th className="px-4 py-2.5">Department</th>
                     <th className="px-4 py-2.5">Phone</th>
                     <th className="px-4 py-2.5">Status</th>
-                    <th className="px-4 py-2.5 text-right">Access Permission (ON/OFF)</th>
+                    <th className="px-4 py-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {userData.students.map(stu => (
-                    <tr key={stu.id} className="hover:bg-slate-50">
+                    <tr key={stu.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-mono font-bold text-slate-900">{stu.rollNo || stu.username}</td>
                       <td className="px-4 py-3 font-semibold text-slate-800">{stu.name}</td>
                       <td className="px-4 py-3">{stu.department || 'General'}</td>
@@ -851,26 +1014,49 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
                         </span>
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => handleToggleStudent(stu.id)}
-                          className={`px-3 py-1 rounded-xl text-xs font-bold transition-all inline-flex items-center space-x-1 cursor-pointer ${
-                            stu.isActive !== false
-                              ? 'bg-emerald-600 text-white hover:bg-emerald-700'
-                              : 'bg-rose-600 text-white hover:bg-rose-700'
-                          }`}
-                        >
-                          {stu.isActive !== false ? (
-                            <>
-                              <ToggleRight className="w-4 h-4" />
-                              <span>Access: ON</span>
-                            </>
-                          ) : (
-                            <>
-                              <ToggleLeft className="w-4 h-4" />
-                              <span>Access: OFF</span>
-                            </>
-                          )}
-                        </button>
+                        <div className="inline-flex items-center space-x-1.5">
+                          {/* Edit Student */}
+                          <button
+                            onClick={() => handleEditUser(stu)}
+                            title="Edit student profile"
+                            className="p-1.5 rounded-lg text-indigo-700 hover:bg-indigo-50 border border-indigo-200 transition-all cursor-pointer flex items-center space-x-1"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline text-[11px] font-bold">Edit</span>
+                          </button>
+
+                          {/* Access Switch */}
+                          <button
+                            onClick={() => handleToggleStudent(stu.id)}
+                            title={stu.isActive !== false ? 'Suspend student account' : 'Restore student account'}
+                            className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition-all inline-flex items-center space-x-1 cursor-pointer ${
+                              stu.isActive !== false
+                                ? 'bg-emerald-600 text-white hover:bg-emerald-700'
+                                : 'bg-rose-600 text-white hover:bg-rose-700'
+                            }`}
+                          >
+                            {stu.isActive !== false ? (
+                              <>
+                                <ToggleRight className="w-3.5 h-3.5" />
+                                <span>ON</span>
+                              </>
+                            ) : (
+                              <>
+                                <ToggleLeft className="w-3.5 h-3.5" />
+                                <span>OFF</span>
+                              </>
+                            )}
+                          </button>
+
+                          {/* Delete Student */}
+                          <button
+                            onClick={() => handleDeleteUser(stu)}
+                            title="Permanently delete student account"
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -879,10 +1065,11 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
             </div>
           </div>
 
-          {/* Workers List */}
+          {/* Workers List with Edit & Delete */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
-            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700">
-              Campus Maintenance Workers & Technicians ({userData.workers.length})
+            <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center justify-between">
+              <span>Campus Maintenance Workers & Technicians ({userData.workers.length})</span>
+              <span className="text-[11px] text-slate-400 font-normal">Edit worker profile details or delete technician accounts</span>
             </div>
 
             <div className="overflow-x-auto">
@@ -894,19 +1081,42 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
                     <th className="px-4 py-2.5">Assigned Department</th>
                     <th className="px-4 py-2.5">Phone Number</th>
                     <th className="px-4 py-2.5">Account Status</th>
+                    <th className="px-4 py-2.5 text-right">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 text-slate-700">
                   {userData.workers.map(w => (
-                    <tr key={w.id} className="hover:bg-slate-50">
+                    <tr key={w.id} className="hover:bg-slate-50 transition-colors">
                       <td className="px-4 py-3 font-mono font-bold text-amber-800">{w.username}</td>
                       <td className="px-4 py-3 font-semibold text-slate-800">{w.name}</td>
                       <td className="px-4 py-3 text-indigo-700 font-medium">{w.department}</td>
-                      <td className="px-4 py-3">{w.phone}</td>
+                      <td className="px-4 py-3">{w.phone || '—'}</td>
                       <td className="px-4 py-3">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800">
                           Active Crew
                         </span>
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <div className="inline-flex items-center space-x-1.5">
+                          {/* Edit Worker */}
+                          <button
+                            onClick={() => handleEditUser(w)}
+                            title="Edit technician profile"
+                            className="p-1.5 rounded-lg text-indigo-700 hover:bg-indigo-50 border border-indigo-200 transition-all cursor-pointer flex items-center space-x-1"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span className="hidden sm:inline text-[11px] font-bold">Edit</span>
+                          </button>
+
+                          {/* Delete Worker */}
+                          <button
+                            onClick={() => handleDeleteUser(w)}
+                            title="Permanently delete worker account"
+                            className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 transition-all cursor-pointer"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -915,26 +1125,44 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
             </div>
           </div>
 
-          {/* University Pre-Admission Roster */}
+          {/* University Pre-Admission Roster with Edit & Delete */}
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
             <div className="p-4 border-b border-slate-200 font-bold text-xs uppercase tracking-wider text-slate-700 flex items-center justify-between">
               <span>Campus Pre-Admission Roster ({userData.roster?.length || 0})</span>
-              <span className="text-[11px] text-slate-400 font-normal">Students verify against this roster during registration</span>
+              <span className="text-[11px] text-slate-400 font-normal">Pre-approved roll numbers for student admission verification</span>
             </div>
 
-            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 text-xs">
+            <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
               {userData.roster?.map((item, idx) => (
-                <div key={idx} className="p-2.5 rounded-xl border border-slate-200 bg-slate-50 flex items-center justify-between">
-                  <div>
+                <div key={idx} className="p-3 rounded-2xl border border-slate-200 bg-slate-50 flex items-center justify-between shadow-xs hover:border-slate-300 transition-all">
+                  <div className="min-w-0 flex-1 pr-2">
                     <span className="font-mono font-bold text-slate-900">{item.rollNo}</span>
-                    <div className="text-slate-700 font-semibold">{item.name}</div>
-                    <div className="text-[10px] text-slate-400">{item.department}</div>
+                    <div className="text-slate-800 font-semibold truncate">{item.name}</div>
+                    <div className="text-[10px] text-slate-400 truncate">{item.department}</div>
+                    <div className="mt-1">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                        item.isClaimed ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-800'
+                      }`}>
+                        {item.isClaimed ? 'Claimed / Registered' : 'Available'}
+                      </span>
+                    </div>
                   </div>
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                    item.isClaimed ? 'bg-slate-200 text-slate-600' : 'bg-emerald-100 text-emerald-800'
-                  }`}>
-                    {item.isClaimed ? 'Registered' : 'Available'}
-                  </span>
+                  <div className="flex items-center space-x-1">
+                    <button
+                      onClick={() => handleEditRoster(item)}
+                      title="Edit admission entry"
+                      className="p-1.5 rounded-lg text-indigo-700 hover:bg-indigo-50 border border-indigo-200 cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => handleDeleteRoster(item)}
+                      title="Delete from roster"
+                      className="p-1.5 rounded-lg text-rose-600 hover:bg-rose-50 border border-rose-200 cursor-pointer"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -1380,55 +1608,642 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
         </div>
       )}
 
-      {/* ================= SECTION 5: LIVE RAW DATABASE VIEWER ================= */}
+      {/* ================= SECTION 5: LIVE RAW DATABASE VIEWER & MANAGER ================= */}
       {activeAdminTab === 'database' && (
-        <div className="bg-slate-950 text-white rounded-3xl p-6 border border-slate-800 shadow-2xl animate-fadeIn">
+        <div className="bg-slate-950 text-white rounded-3xl p-6 border border-slate-800 shadow-2xl animate-fadeIn space-y-6">
           
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-800 mb-5 gap-3">
-            <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                <Database className="w-5 h-5" />
+          {/* Header & Path Banner */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-5 border-b border-slate-800 gap-4">
+            <div className="flex items-start space-x-3.5">
+              <div className="p-3 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 text-emerald-400 border border-emerald-500/30 shadow-inner flex-shrink-0">
+                <Database className="w-6 h-6" />
               </div>
               <div>
-                <h4 className="font-extrabold text-base text-white">
-                  Live Persistent Database Collections Inspector
-                </h4>
-                <p className="text-xs text-slate-400">
-                  Real-time inspection of disk-backed JSON database (`backend/data/issues.json`).
-                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <h4 className="font-extrabold text-base text-white">
+                    Campus Database Management Console
+                  </h4>
+                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping"></span>
+                    <span>Live Disk Storage</span>
+                  </span>
+                </div>
+                <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-slate-400">
+                  <span>Physical File:</span>
+                  <code className="px-2 py-0.5 rounded bg-slate-900 border border-slate-800 text-emerald-400 font-mono text-[11px]">
+                    backend/data/issues.json
+                  </code>
+                  <span className="text-slate-600">•</span>
+                  <span className="text-slate-400">Disk changes persist immediately</span>
+                </div>
               </div>
             </div>
 
-            <button
-              onClick={loadRawDatabase}
-              className="px-3.5 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-emerald-400 border border-slate-700 flex items-center space-x-1.5 cursor-pointer"
-            >
-              <RefreshCw className="w-3.5 h-3.5" />
-              <span>Refresh Database</span>
-            </button>
-          </div>
+            {/* Controls */}
+            <div className="flex flex-wrap items-center gap-2.5">
+              {/* View Mode Toggle */}
+              <div className="bg-slate-900 p-1 rounded-xl border border-slate-800 flex items-center space-x-1">
+                <button
+                  onClick={() => setDbViewMode('visual')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                    dbViewMode === 'visual'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Eye className="w-3.5 h-3.5" />
+                  <span>Interactive Cards</span>
+                </button>
+                <button
+                  onClick={() => setDbViewMode('json')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center space-x-1.5 cursor-pointer ${
+                    dbViewMode === 'json'
+                      ? 'bg-emerald-600 text-white shadow-sm'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                >
+                  <Code className="w-3.5 h-3.5" />
+                  <span>Raw JSON Code</span>
+                </button>
+              </div>
 
-          <div className="flex flex-wrap gap-2 mb-4">
-            {['issues', 'users', 'studentRoster', 'categories', 'locations', 'settings'].map(col => (
+              {/* Refresh Database */}
               <button
-                key={col}
-                onClick={() => setDbCollection(col)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
-                  dbCollection === col
-                    ? 'bg-emerald-600 text-white shadow-sm'
-                    : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
-                }`}
+                onClick={loadRawDatabase}
+                className="px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-emerald-400 border border-slate-800 flex items-center space-x-1.5 cursor-pointer transition-all"
               >
-                {col} ({Array.isArray(rawDbData?.[col]) ? rawDbData[col].length : 'Config'})
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Reload Disk Data</span>
               </button>
-            ))}
+            </div>
           </div>
 
-          <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 max-h-[500px] overflow-y-auto font-mono text-xs text-slate-300 leading-relaxed">
-            <pre className="whitespace-pre-wrap">
-              {rawDbData ? JSON.stringify(rawDbData[dbCollection], null, 2) : 'Loading database...'}
-            </pre>
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div 
+              onClick={() => { setDbCollection('issues'); setDbSearchQuery(''); }}
+              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                dbCollection === 'issues' ? 'bg-indigo-950/50 border-indigo-500/50 ring-1 ring-indigo-500/30' : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                <span>Grievances</span>
+                <span>📋</span>
+              </div>
+              <div className="text-xl font-black text-white mt-1">
+                {rawDbData?.issues?.length || 0}
+              </div>
+              <div className="text-[10px] text-indigo-400 mt-0.5">Work Orders</div>
+            </div>
+
+            <div 
+              onClick={() => { setDbCollection('users'); setDbUserRoleFilter('all'); setDbSearchQuery(''); }}
+              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                dbCollection === 'users' && dbUserRoleFilter === 'all' ? 'bg-emerald-950/50 border-emerald-500/50 ring-1 ring-emerald-500/30' : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                <span>All Users</span>
+                <span>👥</span>
+              </div>
+              <div className="text-xl font-black text-white mt-1">
+                {rawDbData?.users?.length || 0}
+              </div>
+              <div className="text-[10px] text-emerald-400 mt-0.5">Profiles on File</div>
+            </div>
+
+            <div 
+              onClick={() => { setDbCollection('users'); setDbUserRoleFilter('student'); setDbSearchQuery(''); }}
+              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                dbCollection === 'users' && dbUserRoleFilter === 'student' ? 'bg-cyan-950/50 border-cyan-500/50 ring-1 ring-cyan-500/30' : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                <span>Students</span>
+                <span>🎓</span>
+              </div>
+              <div className="text-xl font-black text-white mt-1">
+                {(rawDbData?.users || []).filter(u => u.role === 'student').length}
+              </div>
+              <div className="text-[10px] text-cyan-400 mt-0.5">Verified Accounts</div>
+            </div>
+
+            <div 
+              onClick={() => { setDbCollection('users'); setDbUserRoleFilter('worker'); setDbSearchQuery(''); }}
+              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                dbCollection === 'users' && dbUserRoleFilter === 'worker' ? 'bg-amber-950/50 border-amber-500/50 ring-1 ring-amber-500/30' : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                <span>Workers</span>
+                <span>🔧</span>
+              </div>
+              <div className="text-xl font-black text-white mt-1">
+                {(rawDbData?.users || []).filter(u => u.role === 'worker').length}
+              </div>
+              <div className="text-[10px] text-amber-400 mt-0.5">Field Technicians</div>
+            </div>
+
+            <div 
+              onClick={() => { setDbCollection('studentRoster'); setDbSearchQuery(''); }}
+              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                dbCollection === 'studentRoster' ? 'bg-purple-950/50 border-purple-500/50 ring-1 ring-purple-500/30' : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                <span>Roster</span>
+                <span>📜</span>
+              </div>
+              <div className="text-xl font-black text-white mt-1">
+                {rawDbData?.studentRoster?.length || 0}
+              </div>
+              <div className="text-[10px] text-purple-400 mt-0.5">Pre-Admission Rolls</div>
+            </div>
+
+            <div 
+              onClick={() => { setDbCollection('categories'); setDbSearchQuery(''); }}
+              className={`p-3 rounded-2xl border cursor-pointer transition-all ${
+                dbCollection === 'categories' ? 'bg-rose-950/50 border-rose-500/50 ring-1 ring-rose-500/30' : 'bg-slate-900/60 border-slate-800/80 hover:border-slate-700'
+              }`}
+            >
+              <div className="text-[11px] font-bold text-slate-400 flex items-center justify-between">
+                <span>Categories</span>
+                <span>🏷️</span>
+              </div>
+              <div className="text-xl font-black text-white mt-1">
+                {rawDbData?.categories?.length || 0}
+              </div>
+              <div className="text-[10px] text-rose-400 mt-0.5">Taxonomy & Zones</div>
+            </div>
           </div>
+
+          {/* Collection Tab Bar & Search Toolbar */}
+          <div className="bg-slate-900/80 rounded-2xl p-3 border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-3">
+            
+            {/* Collection Buttons */}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { id: 'issues', label: 'Issues & Grievances', icon: '📋', count: rawDbData?.issues?.length },
+                { id: 'users', label: 'User Accounts', icon: '👥', count: rawDbData?.users?.length },
+                { id: 'studentRoster', label: 'Pre-Admission Roster', icon: '📜', count: rawDbData?.studentRoster?.length },
+                { id: 'categories', label: 'Categories', icon: '🏷️', count: rawDbData?.categories?.length },
+                { id: 'locations', label: 'Campus Locations', icon: '📍', count: rawDbData?.locations?.length },
+                { id: 'settings', label: 'System Settings', icon: '⚙️', count: 'Config' }
+              ].map(col => (
+                <button
+                  key={col.id}
+                  onClick={() => { setDbCollection(col.id); setDbSearchQuery(''); }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center space-x-1.5 ${
+                    dbCollection === col.id
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'bg-slate-950 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <span>{col.icon}</span>
+                  <span>{col.label}</span>
+                  <span className={`px-1.5 py-0.2 rounded-full text-[10px] ${
+                    dbCollection === col.id ? 'bg-emerald-700 text-emerald-100' : 'bg-slate-800 text-slate-400'
+                  }`}>
+                    {col.count !== undefined ? col.count : '—'}
+                  </span>
+                </button>
+              ))}
+            </div>
+
+            {/* Search Input */}
+            {dbCollection !== 'settings' && (
+              <div className="relative min-w-[200px] sm:min-w-[260px]">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                <input
+                  type="text"
+                  value={dbSearchQuery}
+                  onChange={(e) => setDbSearchQuery(e.target.value)}
+                  placeholder={`Search in ${dbCollection}...`}
+                  className="w-full pl-9 pr-3 py-1.5 rounded-xl bg-slate-950 border border-slate-800 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                />
+                {dbSearchQuery && (
+                  <button 
+                    onClick={() => setDbSearchQuery('')}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white text-xs font-bold cursor-pointer"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Sub-filters for Users */}
+          {dbCollection === 'users' && dbViewMode === 'visual' && (
+            <div className="flex items-center space-x-2 text-xs">
+              <span className="text-slate-400 font-bold">Filter Role:</span>
+              {['all', 'student', 'worker'].map(r => (
+                <button
+                  key={r}
+                  onClick={() => setDbUserRoleFilter(r)}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold capitalize transition-all cursor-pointer ${
+                    dbUserRoleFilter === r
+                      ? 'bg-indigo-600 text-white'
+                      : 'bg-slate-900 text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  {r === 'all' ? 'All Roles' : `${r}s`}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* VISUAL MODE: Cards & Tables with DELETE BUTTON on every entry */}
+          {dbViewMode === 'visual' ? (
+            <div className="space-y-3">
+              {/* === COLLECTION: ISSUES === */}
+              {dbCollection === 'issues' && (() => {
+                const list = (rawDbData?.issues || []).filter(item => {
+                  if (!dbSearchQuery) return true;
+                  const q = dbSearchQuery.toLowerCase();
+                  return (
+                    item.ticketId?.toLowerCase().includes(q) ||
+                    item.title?.toLowerCase().includes(q) ||
+                    item.location?.toLowerCase().includes(q) ||
+                    item.status?.toLowerCase().includes(q) ||
+                    item.address?.toLowerCase().includes(q)
+                  );
+                });
+
+                if (list.length === 0) {
+                  return (
+                    <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                      No grievance records found matching criteria.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
+                    {list.map(issue => (
+                      <div key={issue.id} className="bg-slate-900 rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all shadow-md flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between text-xs mb-2">
+                            <span className="font-mono font-bold text-emerald-400 bg-emerald-950/60 px-2 py-0.5 rounded border border-emerald-800/60">
+                              #{issue.ticketId}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase ${
+                              issue.status === 'resolved' ? 'bg-emerald-900/80 text-emerald-300 border border-emerald-700' :
+                              issue.status === 'in_progress' ? 'bg-amber-900/80 text-amber-300 border border-amber-700' :
+                              'bg-slate-800 text-slate-300 border border-slate-700'
+                            }`}>
+                              {issue.status}
+                            </span>
+                          </div>
+
+                          <h5 className="font-bold text-sm text-white line-clamp-1 mb-1">
+                            {issue.title}
+                          </h5>
+
+                          <p className="text-xs text-slate-400 line-clamp-2 mb-2 leading-relaxed">
+                            {issue.description || 'No description provided.'}
+                          </p>
+
+                          <div className="text-[11px] text-slate-400 space-y-0.5 mb-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
+                            <div className="truncate">📍 <strong className="text-slate-300">Zone:</strong> {issue.location || 'Campus'}</div>
+                            {issue.address && <div className="truncate text-amber-300">🏠 <strong className="text-slate-300">Address:</strong> {issue.address}</div>}
+                            <div>🕒 <strong className="text-slate-300">Date:</strong> {issue.createdAt ? new Date(issue.createdAt).toLocaleDateString() : 'Recent'}</div>
+                          </div>
+                        </div>
+
+                        {/* Action buttons for this specific entry */}
+                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedIssue(issue);
+                              setNewStatus(issue.status || 'in_progress');
+                              setAssignedOfficer(issue.assignedOfficer || '');
+                              setStatusModalOpen(true);
+                            }}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-slate-200 transition-all cursor-pointer flex items-center space-x-1"
+                          >
+                            <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                            <span>Update Status</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteDbEntry('issues', issue, issue.ticketId)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Delete Entry</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* === COLLECTION: USERS === */}
+              {dbCollection === 'users' && (() => {
+                let list = rawDbData?.users || [];
+                if (dbUserRoleFilter !== 'all') {
+                  list = list.filter(u => u.role === dbUserRoleFilter);
+                }
+                if (dbSearchQuery) {
+                  const q = dbSearchQuery.toLowerCase();
+                  list = list.filter(u => 
+                    u.name?.toLowerCase().includes(q) ||
+                    u.username?.toLowerCase().includes(q) ||
+                    u.rollNo?.toLowerCase().includes(q) ||
+                    u.department?.toLowerCase().includes(q) ||
+                    u.email?.toLowerCase().includes(q)
+                  );
+                }
+
+                if (list.length === 0) {
+                  return (
+                    <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                      No user accounts found matching criteria.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
+                    {list.map(user => (
+                      <div key={user.id} className="bg-slate-900 rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all shadow-md flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between text-xs mb-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                              user.role === 'admin' ? 'bg-indigo-950 text-indigo-300 border border-indigo-700' :
+                              user.role === 'worker' ? 'bg-amber-950 text-amber-300 border border-amber-700' :
+                              'bg-emerald-950 text-emerald-300 border border-emerald-700'
+                            }`}>
+                              {user.role}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              user.isActive !== false ? 'bg-emerald-900/60 text-emerald-300' : 'bg-rose-900/60 text-rose-300'
+                            }`}>
+                              {user.isActive !== false ? 'Active' : 'Suspended'}
+                            </span>
+                          </div>
+
+                          <h5 className="font-bold text-sm text-white truncate mb-0.5">
+                            {user.name}
+                          </h5>
+                          <div className="font-mono text-xs text-slate-400 mb-2">
+                            ID: <strong className="text-slate-200">{user.username || user.rollNo}</strong>
+                          </div>
+
+                          <div className="text-[11px] text-slate-400 space-y-0.5 mb-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80">
+                            <div className="truncate">🏢 <strong className="text-slate-300">Dept:</strong> {user.department || 'General'}</div>
+                            <div className="truncate">📞 <strong className="text-slate-300">Phone:</strong> {user.phone || '—'}</div>
+                            <div className="truncate">✉️ <strong className="text-slate-300">Email:</strong> {user.email || '—'}</div>
+                            <div>🔑 <strong className="text-slate-300">Password:</strong> <span className="font-mono text-slate-500">••••••••</span></div>
+                          </div>
+                        </div>
+
+                        {/* Actions on this entry */}
+                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                          {user.role !== 'admin' ? (
+                            <>
+                              <button
+                                onClick={() => handleEditUser(user)}
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-indigo-300 border border-slate-700 transition-all cursor-pointer flex items-center space-x-1"
+                              >
+                                <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
+                                <span>Edit Profile</span>
+                              </button>
+
+                              <button
+                                onClick={() => handleDeleteUser(user)}
+                                className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
+                              >
+                                <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                                <span>Delete User</span>
+                              </button>
+                            </>
+                          ) : (
+                            <span className="text-[11px] text-slate-500 italic">Master Administrator (Protected)</span>
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* === COLLECTION: STUDENT ROSTER === */}
+              {dbCollection === 'studentRoster' && (() => {
+                let list = rawDbData?.studentRoster || [];
+                if (dbSearchQuery) {
+                  const q = dbSearchQuery.toLowerCase();
+                  list = list.filter(r => 
+                    r.rollNo?.toLowerCase().includes(q) ||
+                    r.name?.toLowerCase().includes(q) ||
+                    r.department?.toLowerCase().includes(q)
+                  );
+                }
+
+                if (list.length === 0) {
+                  return (
+                    <div className="p-8 text-center bg-slate-900/50 rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                      No roster entries found matching criteria.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
+                    {list.map((item, idx) => (
+                      <div key={idx} className="bg-slate-900 rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all shadow-md flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between text-xs mb-1.5">
+                            <span className="font-mono font-bold text-purple-400 bg-purple-950/60 px-2 py-0.5 rounded border border-purple-800/60">
+                              {item.rollNo}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                              item.isClaimed ? 'bg-slate-800 text-slate-400' : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                            }`}>
+                              {item.isClaimed ? 'Account Claimed' : 'Available for Sign-up'}
+                            </span>
+                          </div>
+
+                          <h5 className="font-bold text-sm text-white truncate mb-1">
+                            {item.name}
+                          </h5>
+
+                          <div className="text-[11px] text-slate-400 space-y-0.5 mb-3 bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/60">
+                            <div className="truncate">🏛️ <strong className="text-slate-300">Dept:</strong> {item.department || 'General Academic'}</div>
+                            <div className="truncate">📞 <strong className="text-slate-300">Phone:</strong> {item.phone || '—'}</div>
+                          </div>
+                        </div>
+
+                        {/* Actions */}
+                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                          <button
+                            onClick={() => handleEditRoster(item)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-slate-800 hover:bg-slate-700 text-purple-300 border border-slate-700 transition-all cursor-pointer flex items-center space-x-1"
+                          >
+                            <Edit3 className="w-3.5 h-3.5" />
+                            <span>Edit Roster</span>
+                          </button>
+
+                          <button
+                            onClick={() => handleDeleteRoster(item)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Delete Entry</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* === COLLECTION: CATEGORIES === */}
+              {dbCollection === 'categories' && (() => {
+                let list = rawDbData?.categories || [];
+                if (dbSearchQuery) {
+                  const q = dbSearchQuery.toLowerCase();
+                  list = list.filter(c => 
+                    c.en?.toLowerCase().includes(q) ||
+                    c.as?.toLowerCase().includes(q) ||
+                    c.defaultDept?.toLowerCase().includes(q)
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
+                    {list.map(cat => (
+                      <div key={cat.id} className="bg-slate-900 rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all shadow-md flex flex-col justify-between">
+                        <div>
+                          <div className="font-mono text-[10px] text-slate-500 mb-1">ID: {cat.id}</div>
+                          <h5 className="font-bold text-sm text-white mb-0.5">{cat.en}</h5>
+                          <div className="text-xs text-emerald-400 font-assamese mb-2">{cat.as}</div>
+                          <div className="text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+                            🏢 Assigned Dept: <strong className="text-slate-200">{cat.defaultDept}</strong>
+                          </div>
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-end mt-3">
+                          <button
+                            onClick={() => handleDeleteCategory(cat.id)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Delete Category</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* === COLLECTION: LOCATIONS === */}
+              {dbCollection === 'locations' && (() => {
+                let list = rawDbData?.locations || [];
+                if (dbSearchQuery) {
+                  const q = dbSearchQuery.toLowerCase();
+                  list = list.filter(l => 
+                    l.en?.toLowerCase().includes(q) ||
+                    l.as?.toLowerCase().includes(q) ||
+                    l.refDept?.toLowerCase().includes(q)
+                  );
+                }
+
+                return (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 max-h-[600px] overflow-y-auto pr-1">
+                    {list.map(loc => (
+                      <div key={loc.id} className="bg-slate-900 rounded-2xl p-4 border border-slate-800 hover:border-slate-700 transition-all shadow-md flex flex-col justify-between">
+                        <div>
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="font-mono text-[10px] text-slate-500">ID: {loc.id}</span>
+                            <span className="font-mono text-[10px] text-emerald-400 bg-emerald-950/60 px-1.5 py-0.5 rounded">
+                              X: {loc.x}%, Y: {loc.y}%
+                            </span>
+                          </div>
+                          <h5 className="font-bold text-sm text-white mb-0.5">{loc.en}</h5>
+                          <div className="text-xs text-emerald-400 font-assamese mb-2">{loc.as}</div>
+                          {loc.refDept && (
+                            <div className="text-[11px] text-slate-400 bg-slate-950/60 p-2 rounded-xl border border-slate-800/60">
+                              📍 Relative: {loc.distanceMeters}m {loc.direction} from {loc.refDept}
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-end mt-3">
+                          <button
+                            onClick={() => handleDeleteLocation(loc.id)}
+                            className="px-3 py-1.5 rounded-xl text-xs font-bold bg-rose-950/70 hover:bg-rose-900 text-rose-300 border border-rose-800 transition-all cursor-pointer flex items-center space-x-1.5"
+                          >
+                            <Trash2 className="w-3.5 h-3.5 text-rose-400" />
+                            <span>Delete Location</span>
+                          </button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                );
+              })()}
+
+              {/* === COLLECTION: SETTINGS === */}
+              {dbCollection === 'settings' && (
+                <div className="bg-slate-900 rounded-2xl p-5 border border-slate-800 max-w-xl space-y-4">
+                  <h5 className="font-bold text-sm text-white">System Settings & Policies</h5>
+                  
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex items-center justify-between">
+                    <div>
+                      <div className="font-bold text-xs text-white">AI Auto-Dispatch to Workers</div>
+                      <div className="text-[11px] text-slate-400">Current setting in database disk</div>
+                    </div>
+                    <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${
+                      rawDbData?.settings?.aiAutoDispatch ? 'bg-emerald-900 text-emerald-300' : 'bg-amber-900 text-amber-300'
+                    }`}>
+                      {rawDbData?.settings?.aiAutoDispatch ? 'Auto-Dispatch ON' : 'Approval Required'}
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <div className="font-bold text-xs text-white mb-1">Campus Name</div>
+                    <div className="text-xs text-slate-300 font-mono">
+                      EN: {rawDbData?.settings?.campusName?.en || 'Assam State University'}
+                    </div>
+                    <div className="text-xs text-emerald-400 font-assamese mt-0.5">
+                      AS: {rawDbData?.settings?.campusName?.as || 'অসম ৰাজ্যিক বিশ্ববিদ্যালয়'}
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800">
+                    <div className="font-bold text-xs text-white mb-1">Administrative Master Email</div>
+                    <div className="text-xs text-slate-300 font-mono">
+                      {rawDbData?.settings?.adminEmail || 'admin@example.invalid'}
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </div>
+          ) : (
+            /* RAW JSON SYNTAX VIEWER */
+            <div className="bg-slate-900 rounded-2xl border border-slate-800 p-4 max-h-[550px] overflow-y-auto font-mono text-xs text-emerald-300 leading-relaxed shadow-inner">
+              <div className="flex items-center justify-between pb-2 mb-2 border-b border-slate-800 text-slate-400 text-[11px]">
+                <span>Showing collection: <strong className="text-white">{dbCollection}</strong></span>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText(JSON.stringify(rawDbData?.[dbCollection], null, 2));
+                    showToast('JSON copied to clipboard!');
+                  }}
+                  className="px-2.5 py-1 rounded bg-slate-800 hover:bg-slate-700 text-slate-200 text-[10px] font-bold cursor-pointer"
+                >
+                  Copy JSON
+                </button>
+              </div>
+              <pre className="whitespace-pre-wrap">
+                {rawDbData ? JSON.stringify(rawDbData[dbCollection], null, 2) : 'Loading database...'}
+              </pre>
+            </div>
+          )}
 
         </div>
       )}
@@ -1759,6 +2574,252 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh }) {
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT USER (STUDENT OR WORKER) ================= */}
+      {editUserModalOpen && editingUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center space-x-2">
+                <Edit3 className="w-5 h-5 text-indigo-600" />
+                <h4 className="text-base font-extrabold text-slate-900">
+                  Edit {editingUser.role === 'student' ? 'Student' : 'Worker'} Profile
+                </h4>
+              </div>
+              <button
+                onClick={() => setEditUserModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditUser} className="mt-4 space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingUser.name || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    {editingUser.role === 'student' ? 'Admission Roll No.' : 'Worker ID'}
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={editingUser.role === 'student' ? (editingUser.rollNo || editingUser.username || '') : (editingUser.username || '')}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (editingUser.role === 'student') {
+                        setEditingUser({ ...editingUser, rollNo: val, username: val });
+                      } else {
+                        setEditingUser({ ...editingUser, username: val });
+                      }
+                    }}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Department
+                  </label>
+                  <input
+                    type="text"
+                    value={editingUser.department || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, department: e.target.value })}
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="text"
+                    value={editingUser.phone || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, phone: e.target.value })}
+                    placeholder="e.g. 9876543210"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-slate-700 mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={editingUser.email || ''}
+                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                    placeholder="user@campus.edu.in"
+                    className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Reset Password (Leave blank to keep existing)
+                </label>
+                <input
+                  type="text"
+                  value={editingUser.password || ''}
+                  onChange={(e) => setEditingUser({ ...editingUser, password: e.target.value })}
+                  placeholder="Enter new password if changing"
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800 font-mono"
+                />
+              </div>
+
+              {editingUser.role === 'student' && (
+                <div className="flex items-center space-x-2 pt-1">
+                  <input
+                    type="checkbox"
+                    id="edit_is_active"
+                    checked={editingUser.isActive !== false}
+                    onChange={(e) => setEditingUser({ ...editingUser, isActive: e.target.checked })}
+                    className="w-4 h-4 rounded text-emerald-600"
+                  />
+                  <label htmlFor="edit_is_active" className="font-bold text-slate-700 cursor-pointer">
+                    Portal Access Enabled (Active Account)
+                  </label>
+                </div>
+              )}
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditUserModalOpen(false)}
+                  className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-600/30 transition-all cursor-pointer"
+                >
+                  Save Profile Changes
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ================= MODAL: EDIT ROSTER ENTRY ================= */}
+      {editRosterModalOpen && editingRoster && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl border border-slate-300 max-w-md w-full p-6 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div className="flex items-center space-x-2">
+                <Edit3 className="w-5 h-5 text-purple-600" />
+                <h4 className="text-base font-extrabold text-slate-900">
+                  Edit Pre-Admission Roster Entry
+                </h4>
+              </div>
+              <button
+                onClick={() => setEditRosterModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 text-lg font-bold cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditRoster} className="mt-4 space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Admission Roll No.
+                </label>
+                <input
+                  type="text"
+                  disabled
+                  value={editingRoster.rollNo || ''}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 bg-slate-100 font-mono font-bold text-slate-700"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Student Full Name
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingRoster.name || ''}
+                  onChange={(e) => setEditingRoster({ ...editingRoster, name: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Academic Department
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editingRoster.department || ''}
+                  onChange={(e) => setEditingRoster({ ...editingRoster, department: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 font-semibold text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="text"
+                  value={editingRoster.phone || ''}
+                  onChange={(e) => setEditingRoster({ ...editingRoster, phone: e.target.value })}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-300 text-slate-800"
+                />
+              </div>
+
+              <div className="flex items-center space-x-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="edit_roster_claimed"
+                  checked={editingRoster.isClaimed === true}
+                  onChange={(e) => setEditingRoster({ ...editingRoster, isClaimed: e.target.checked })}
+                  className="w-4 h-4 rounded text-purple-600"
+                />
+                <label htmlFor="edit_roster_claimed" className="font-bold text-slate-700 cursor-pointer">
+                  Marked as Claimed / Registered
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end space-x-2.5">
+                <button
+                  type="button"
+                  onClick={() => setEditRosterModalOpen(false)}
+                  className="px-4 py-2 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition-all cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 rounded-xl font-bold bg-purple-600 hover:bg-purple-700 text-white shadow-md shadow-purple-600/30 transition-all cursor-pointer"
+                >
+                  Save Roster Entry
+                </button>
+              </div>
+            </form>
           </div>
         </div>
       )}

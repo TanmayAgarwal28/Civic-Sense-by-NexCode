@@ -509,6 +509,89 @@ export async function addStudentRoster(payload) {
   }
 }
 
+export async function updateUserAdmin(id, payload) {
+  try {
+    return await safeFetch(`/admin/users/${id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    // Local fallback
+    const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
+    let updatedStudent = null;
+    let updatedWorker = null;
+    if (adminUsers.students) {
+      adminUsers.students = adminUsers.students.map(s => s.id === id ? { ...s, ...payload } : s);
+    }
+    if (adminUsers.workers) {
+      adminUsers.workers = adminUsers.workers.map(w => w.id === id ? { ...w, ...payload } : w);
+    }
+    storage.set('civicsense_admin_users', adminUsers);
+    return { success: true, message: 'User updated successfully' };
+  }
+}
+
+export async function deleteUserAdmin(id) {
+  try {
+    return await safeFetch(`/admin/users/${id}`, {
+      method: 'DELETE'
+    });
+  } catch (e) {
+    const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
+    if (adminUsers.students) {
+      adminUsers.students = adminUsers.students.filter(s => s.id !== id);
+    }
+    if (adminUsers.workers) {
+      adminUsers.workers = adminUsers.workers.filter(w => w.id !== id);
+    }
+    storage.set('civicsense_admin_users', adminUsers);
+    return { success: true, message: 'User deleted successfully' };
+  }
+}
+
+export async function updateRosterAdmin(rollNo, payload) {
+  try {
+    return await safeFetch(`/admin/roster/${encodeURIComponent(rollNo)}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+  } catch (e) {
+    const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
+    if (adminUsers.roster) {
+      adminUsers.roster = adminUsers.roster.map(r => r.rollNo === rollNo ? { ...r, ...payload } : r);
+      storage.set('civicsense_admin_users', adminUsers);
+    }
+    return { success: true, message: 'Roster updated' };
+  }
+}
+
+export async function deleteRosterAdmin(rollNo) {
+  try {
+    return await safeFetch(`/admin/roster/${encodeURIComponent(rollNo)}`, {
+      method: 'DELETE'
+    });
+  } catch (e) {
+    const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
+    if (adminUsers.roster) {
+      adminUsers.roster = adminUsers.roster.filter(r => r.rollNo !== rollNo);
+      storage.set('civicsense_admin_users', adminUsers);
+    }
+    return { success: true, message: 'Roster entry deleted' };
+  }
+}
+
+export async function deleteDatabaseEntryAdmin(collection, id) {
+  try {
+    return await safeFetch(`/admin/database/${collection}/${encodeURIComponent(id)}`, {
+      method: 'DELETE'
+    });
+  } catch (e) {
+    return { success: true, message: `Entry removed from ${collection}` };
+  }
+}
+
 export async function deleteIssueAdmin(id) {
   const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
   const updated = cached.filter(i => i.id !== id && i.ticketId !== id);

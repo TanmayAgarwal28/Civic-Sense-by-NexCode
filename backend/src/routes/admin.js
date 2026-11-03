@@ -4,9 +4,13 @@ import {
   deleteIssue, 
   getAllUsers, 
   toggleUserActive, 
+  updateUser,
+  deleteUser,
   createWorkerUser, 
   getStudentRoster, 
   addRosterEntry, 
+  updateRosterEntry,
+  deleteRosterEntry,
   getCategories, 
   addCategory, 
   deleteCategory, 
@@ -17,6 +21,7 @@ import {
   updateSettings, 
   getRawDatabase, 
   resetDatabase,
+  deleteDatabaseEntry,
   updateIssue 
 } from '../db/database.js';
 import { generateOfficialNotice } from '../ai/noticeGenerator.js';
@@ -172,6 +177,73 @@ router.post('/roster', (req, res) => {
   }
 });
 
+// Admin edits user profile (student or worker)
+router.patch('/users/:id', (req, res) => {
+  try {
+    const updated = updateUser(req.params.id, req.body);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'User not found' });
+    }
+    const { password: _, ...safeUser } = updated;
+    res.json({
+      success: true,
+      message: 'User profile updated successfully.',
+      data: safeUser
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin deletes user profile
+router.delete('/users/:id', (req, res) => {
+  try {
+    const deleted = deleteUser(req.params.id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'User not found or already deleted' });
+    }
+    res.json({
+      success: true,
+      message: 'User profile removed permanently from database.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin edits pre-admission roster entry
+router.patch('/roster/:rollNo', (req, res) => {
+  try {
+    const updated = updateRosterEntry(req.params.rollNo, req.body);
+    if (!updated) {
+      return res.status(404).json({ success: false, message: 'Roster entry not found' });
+    }
+    res.json({
+      success: true,
+      message: 'Roster entry updated successfully.',
+      data: updated
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Admin deletes pre-admission roster entry
+router.delete('/roster/:rollNo', (req, res) => {
+  try {
+    const deleted = deleteRosterEntry(req.params.rollNo);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: 'Roster entry not found or already deleted' });
+    }
+    res.json({
+      success: true,
+      message: 'Student roll number deleted permanently from admission roster.'
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ---------------- DYNAMIC CATEGORIES ----------------
 router.get('/categories', (req, res) => {
   res.json({ success: true, data: getCategories() });
@@ -252,6 +324,23 @@ router.get('/raw-database', (req, res) => {
         ...raw,
         users: sanitizedUsers
       }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// Delete any entry from any collection in the database
+router.delete('/database/:collection/:id', (req, res) => {
+  try {
+    const { collection, id } = req.params;
+    const deleted = deleteDatabaseEntry(collection, id);
+    if (!deleted) {
+      return res.status(404).json({ success: false, message: `Record not found in ${collection}` });
+    }
+    res.json({
+      success: true,
+      message: `Record ${id} successfully deleted from ${collection}.`
     });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

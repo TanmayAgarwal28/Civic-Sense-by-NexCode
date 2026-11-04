@@ -31,10 +31,20 @@ const storage = {
 async function safeFetch(path, options = {}) {
   let lastError = null;
 
+  const savedUser = storage.get('civicsense_current_user', null);
+  const headers = { ...(options.headers || {}) };
+  if (savedUser?.sessionToken) {
+    headers.Authorization = `Bearer ${savedUser.sessionToken}`;
+  }
+  const optionsWithAuth = {
+    ...options,
+    headers
+  };
+
   for (const base of API_ENDPOINTS) {
     try {
       const url = `${base}${path}`;
-      const res = await fetch(url, options);
+      const res = await fetch(url, optionsWithAuth);
       
       const contentType = res.headers.get('content-type') || '';
       if (!contentType.includes('application/json')) {
@@ -88,7 +98,7 @@ export async function loginUser(payload) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    user = res.user;
+    user = { ...res.user, sessionToken: res.sessionToken };
   } catch (err) {
     if (err.status === 403) {
       throw new Error(err.data?.message || 'Access denied: Account suspended by administrator.');
@@ -942,7 +952,9 @@ export async function fetchRawDatabase() {
       }
       return res;
     }
-  } catch (e) {}
+  } catch (e) {
+    if (e.status === 401 || e.status === 403) throw e;
+  }
 
   const issues = storage.get('civicsense_issues', FALLBACK_ISSUES).filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
   const students = adminUsers.students || FALLBACK_USERS.students;

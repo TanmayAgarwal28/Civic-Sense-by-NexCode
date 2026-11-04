@@ -8,6 +8,7 @@ import {
   getSettings 
 } from '../db/database.js';
 import { logActivity } from '../db/activityLogger.js';
+import { createSessionToken } from '../auth/session.js';
 
 const router = express.Router();
 
@@ -49,7 +50,11 @@ router.post('/login', (req, res) => {
       data: { role: user.role, username: user.username, name: user.name }
     });
 
-    res.json({ success: true, user: safeUser });
+    res.json({
+      success: true,
+      user: safeUser,
+      sessionToken: createSessionToken(user)
+    });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

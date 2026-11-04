@@ -3,15 +3,17 @@ import { app } from './src/server.js';
 import { resetDatabase } from './src/db/database.js';
 
 // In-memory HTTP mock for isolated testing without network socket
-function mockRequest(app, method, url, body = null) {
+function mockRequest(app, method, url, body = null, headers = {}) {
   return new Promise((resolve) => {
     const req = new EventEmitter();
     req.method = method;
     req.url = url;
     req.headers = {
       'content-type': 'application/json',
-      host: 'localhost'
+      host: 'localhost',
+      ...headers
     };
+    req.get = (name) => req.headers[name.toLowerCase()];
 
     const res = new EventEmitter();
     let resData = '';
@@ -80,7 +82,11 @@ async function runApiTests() {
       role: 'admin'
     });
     console.log(`2. Admin Login: status=${adminLogin.status}, user="${adminLogin.data?.user?.name}"`);
-    if (adminLogin.status !== 200 || adminLogin.data?.user?.role !== 'admin') throw new Error('Admin login failed');
+    if (
+      adminLogin.status !== 200 ||
+      adminLogin.data?.user?.role !== 'admin' ||
+      typeof adminLogin.data?.sessionToken !== 'string'
+    ) throw new Error('Admin login failed');
     console.log('   ✓ Admin login verified!');
 
     // 3. Worker Login
@@ -210,7 +216,31 @@ async function runApiTests() {
     console.log('   ✓ Admin permanent deletion verified!');
 
     // 15. Raw Database Inspector
-    const rawDb = await mockRequest(app, 'GET', '/api/admin/raw-database');
+    const rawDatabaseRequests = [
+      ['GET', '/api/admin/raw-database'],
+      ['DELETE', '/api/admin/database/issues/not-found'],
+      ['POST', '/api/admin/reset-data']
+    ];
+    for (const [method, url] of rawDatabaseRequests) {
+      const unauthorized = await mockRequest(app, method, url);
+      if (unauthorized.status !== 401) {
+        throw new Error(`${method} ${url} should reject requests without a session`);
+      }
+    }
+
+    const spoofedRole = await mockRequest(app, 'GET', '/api/admin/raw-database', null, {
+      'x-user-role': 'admin'
+    });
+    if (spoofedRole.status !== 401) throw new Error('Client-supplied admin role must not authorize access');
+
+    const workerAccess = await mockRequest(app, 'GET', '/api/admin/raw-database', null, {
+      authorization: `Bearer ${workerLogin.data.sessionToken}`
+    });
+    if (workerAccess.status !== 403) throw new Error('Worker session must not access the raw database');
+
+    const rawDb = await mockRequest(app, 'GET', '/api/admin/raw-database', null, {
+      authorization: `Bearer ${adminLogin.data.sessionToken}`
+    });
     console.log(`15. Raw Database Inspector: status=${rawDb.status}, collections=[${Object.keys(rawDb.data?.data || {}).join(', ')}]`);
     if (rawDb.status !== 200 || !rawDb.data?.data?.issues) throw new Error('Raw DB inspection failed');
     console.log('   ✓ Raw database viewer functional!');

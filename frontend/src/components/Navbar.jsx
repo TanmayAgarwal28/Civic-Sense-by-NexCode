@@ -135,19 +135,21 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
               {t('campusMapTab')}
             </button>
 
-            {/* Full-Stack Live Backend & Persistent Database Engine Console */}
-            <button
-              onClick={() => setActiveTab('database')}
-              className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center space-x-1.5 cursor-pointer ${
-                activeTab === 'database'
-                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/40 ring-2 ring-emerald-400/50'
-                  : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-              }`}
-            >
-              <Database className="w-4 h-4 text-emerald-300 animate-pulse" />
-              <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & DB'}</span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-extrabold uppercase">LIVE</span>
-            </button>
+            {/* Live Persistent Database Engine Console (Strictly for authenticated Admin only) */}
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => setActiveTab('database')}
+                className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center space-x-1.5 cursor-pointer ${
+                  activeTab === 'database'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/40 ring-2 ring-emerald-400/50'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+                }`}
+              >
+                <Database className="w-4 h-4 text-emerald-300 animate-pulse" />
+                <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & DB'}</span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-extrabold uppercase">LIVE</span>
+              </button>
+            )}
 
             {/* Admin Console (Strictly for authenticated Admin) */}
             {currentUser?.role === 'admin' && (
@@ -290,19 +292,21 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
               <span>🗺️</span>
             </button>
 
-            {/* Backend & Live Database in Mobile Menu (Always accessible) */}
-            <button
-              onClick={() => { setActiveTab('database'); setMobileMenuOpen(false); }}
-              className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
-                activeTab === 'database' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
-              }`}
-            >
-              <span className="flex items-center space-x-2">
-                <Database className="w-3.5 h-3.5 text-emerald-400" />
-                <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & Live Database'}</span>
-              </span>
-              <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">LIVE</span>
-            </button>
+            {/* Backend & Live Database in Mobile Menu (Strictly Admin only) */}
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => { setActiveTab('database'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                  activeTab === 'database' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <span className="flex items-center space-x-2">
+                  <Database className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & Live Database'}</span>
+                </span>
+                <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">LIVE</span>
+              </button>
+            )}
 
             {/* Admin Console in Mobile Menu (Strictly Admin only) */}
             {currentUser?.role === 'admin' && (

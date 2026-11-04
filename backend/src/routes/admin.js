@@ -26,6 +26,7 @@ import {
 } from '../db/database.js';
 import { generateOfficialNotice } from '../ai/noticeGenerator.js';
 import { logActivity, getActivityLogs, clearActivityLogs } from '../db/activityLogger.js';
+import { requireAdminRole } from '../auth/session.js';
 
 const router = express.Router();
 
@@ -378,7 +379,7 @@ router.patch('/settings', (req, res) => {
 });
 
 // ---------------- RAW DATABASE INSPECTOR ----------------
-router.get('/raw-database', (req, res) => {
+router.get('/raw-database', requireAdminRole, (req, res) => {
   try {
     const raw = getRawDatabase();
     // Sanitize passwords before returning
@@ -396,7 +397,7 @@ router.get('/raw-database', (req, res) => {
 });
 
 // Delete any entry from any collection in the database
-router.delete('/database/:collection/:id', (req, res) => {
+router.delete('/database/:collection/:id', requireAdminRole, (req, res) => {
   try {
     const { collection, id } = req.params;
     const deleted = deleteDatabaseEntry(collection, id);
@@ -422,7 +423,7 @@ router.delete('/database/:collection/:id', (req, res) => {
 });
 
 // Reset database to demo state
-router.post('/reset-data', (req, res) => {
+router.post('/reset-data', requireAdminRole, (req, res) => {
   try {
     const freshData = resetDatabase();
     logActivity({

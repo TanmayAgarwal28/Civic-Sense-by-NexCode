@@ -97,6 +97,16 @@ app.use((req, res, next) => {
 // Initialize database on boot
 readDatabase();
 
+// Root index endpoint
+app.get('/', (req, res) => {
+  res.json({
+    status: 'online',
+    system: 'CivicSense Backend API',
+    message: 'Backend server is running successfully! Access the web app at http://localhost:5173',
+    healthCheck: '/api/health'
+  });
+});
+
 // Health check endpoint
 app.get('/api/health', (req, res) => {
   res.json({

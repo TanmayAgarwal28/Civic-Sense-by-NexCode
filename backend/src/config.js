@@ -10,6 +10,7 @@ const __dirname = path.dirname(__filename);
 export const CONFIG = {
   PORT: process.env.PORT || 5001,
   NODE_ENV: process.env.NODE_ENV || 'development',
+  AUTH_TOKEN_SECRET: process.env.AUTH_TOKEN_SECRET || '',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
   GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   DATA_DIR: path.join(__dirname, '../data'),

@@ -89,13 +89,13 @@ export default function App() {
     loadData();
   }, []);
 
-  // Role guard for worker tab
+  // Role guard for worker, admin, and database tabs (Strictly restrict database/admin to admin role only)
   useEffect(() => {
     if (activeTab === 'worker' && currentUser?.role !== 'worker') {
       setActiveTab('report');
     }
-    if (activeTab === 'admin' && currentUser?.role !== 'admin') {
-      setActiveTab('report');
+    if ((activeTab === 'admin' || activeTab === 'database') && currentUser?.role !== 'admin') {
+      setActiveTab(currentUser?.role === 'worker' ? 'worker' : 'report');
     }
   }, [currentUser, activeTab]);
 
@@ -282,25 +282,27 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 5: Campus Admin Command Center */}
-        {activeTab === 'admin' && (
+        {/* Tab 5: Campus Admin Command Center (Strictly Admin only) */}
+        {activeTab === 'admin' && currentUser?.role === 'admin' && (
           <div className="animate-fadeIn">
             <AdminDashboard
               issues={issues}
               analytics={analytics}
               onRefresh={loadData}
+              currentUser={currentUser}
               initialAdminTab="triage"
             />
           </div>
         )}
 
-        {/* Tab 6: Live Persistent Database & Backend Processing Engine (Full-Stack Inspector) */}
-        {activeTab === 'database' && (
+        {/* Tab 6: Live Persistent Database Engine Console (Strictly Admin only) */}
+        {activeTab === 'database' && currentUser?.role === 'admin' && (
           <div className="animate-fadeIn">
             <AdminDashboard
               issues={issues}
               analytics={analytics}
               onRefresh={loadData}
+              currentUser={currentUser}
               initialAdminTab="database"
             />
           </div>

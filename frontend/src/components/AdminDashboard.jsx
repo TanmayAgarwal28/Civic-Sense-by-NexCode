@@ -41,8 +41,26 @@ import {
   Layers, ArrowRight, Server
 } from 'lucide-react';
 
-export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initialAdminTab = 'triage' }) {
+export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initialAdminTab = 'triage', currentUser }) {
   const { lang, t } = useLanguage();
+
+  if (currentUser && currentUser.role !== 'admin') {
+    return (
+      <div className="bg-slate-900 border border-rose-800/80 rounded-3xl p-8 sm:p-12 text-center text-white max-w-xl mx-auto my-12 shadow-2xl space-y-4 animate-fadeIn">
+        <div className="w-16 h-16 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-center mx-auto text-rose-400">
+          <AlertTriangle className="w-8 h-8" />
+        </div>
+        <h3 className="text-xl font-extrabold text-white">
+          {lang === 'as' ? 'প্ৰৱেশ নিষিদ্ধ / Access Restricted' : 'Access Restricted / Unauthorized'}
+        </h3>
+        <p className="text-xs text-slate-300 leading-relaxed">
+          {lang === 'as'
+            ? 'ডাটাবেচ আৰু প্ৰশাসক কাৰ্য্যপ্ৰণালী কেৱল কৰ্তৃত্বপ্ৰাপ্ত বিশ্ববিদ্যালয় প্ৰশাসকসকলৰ বাবে সংৰক্ষিত। ছাত্ৰ বা কাৰিকৰী কৰ্মী একাউণ্টেৰে ডাটাবেচ প্ৰৱেশ কৰিব নোৱাৰিব।'
+            : 'The live physical database and administrative controls are strictly restricted to authorized Campus Administrators. Student and Maintenance Worker profiles do not have database access.'}
+        </p>
+      </div>
+    );
+  }
 
   const [activeAdminTab, setActiveAdminTab] = useState(initialAdminTab); // 'triage', 'users', 'categories', 'settings', 'database'
 

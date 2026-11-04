@@ -1024,7 +1024,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
 
       {/* Top Banner */}
       <div className="bg-slate-900 text-white rounded-3xl p-4 sm:p-6 border border-slate-800 shadow-xl space-y-5">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-4">
           <div className="flex items-start space-x-3.5">
             <img 
               src="/civicsense-icon.png" 
@@ -1080,6 +1080,17 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
               <RefreshCw className="w-3.5 h-3.5" />
               <span>{t('resetDemoDataBtn')}</span>
             </button>
+            <a
+              href="http://localhost:5001/logs"
+              target="_blank"
+              rel="noreferrer"
+              title="Open real-time backend /logs in browser"
+              className="flex items-center space-x-1.5 px-3 py-2 rounded-xl text-xs font-bold bg-emerald-950/80 hover:bg-emerald-900 text-emerald-300 border border-emerald-700 transition-all cursor-pointer shadow-sm"
+            >
+              <Terminal className="w-3.5 h-3.5 text-emerald-400" />
+              <span>/logs Live View</span>
+              <ExternalLink className="w-3 h-3 text-emerald-400" />
+            </a>
           </div>
         </div>
 
@@ -2233,7 +2244,23 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 }`}
               >
                 <Layers className="w-3.5 h-3.5 text-emerald-300" />
-                <span>{lang === 'as' ? '🌟 উভয় বেকএণ্ড আৰু ডাটাবেচ' : '🌟 Both Backend & Database (Unified)'}</span>
+                <span>{lang === 'as' ? '🌟 উভয় দৃশ্যপট' : '🌟 Unified'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setBackendSubView('logs')}
+                className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 cursor-pointer shadow-sm ${
+                  backendSubView === 'logs'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-emerald-900/40 ring-1 ring-emerald-400'
+                    : 'bg-slate-800 text-slate-300 hover:text-white hover:bg-slate-700'
+                }`}
+              >
+                <Activity className="w-3.5 h-3.5 text-emerald-300 animate-pulse" />
+                <span>{lang === 'as' ? '📜 প্ৰত্যক্ষ লগসমূহ (/logs)' : '📜 Live Logs (/logs)'}</span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] bg-emerald-500/20 text-emerald-300 font-mono">
+                  {activityLogs.length}
+                </span>
               </button>
 
               <button
@@ -2246,7 +2273,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 }`}
               >
                 <Server className="w-3.5 h-3.5 text-indigo-300" />
-                <span>{lang === 'as' ? '⚡ কেৱল বেকএণ্ড ইঞ্জিন' : '⚡ Backend Engine & Pipeline'}</span>
+                <span>{lang === 'as' ? '⚡ বেকএণ্ড ইঞ্জিন' : '⚡ Pipeline'}</span>
               </button>
 
               <button
@@ -2259,14 +2286,21 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 }`}
               >
                 <Database className="w-3.5 h-3.5 text-cyan-300" />
-                <span>{lang === 'as' ? '🗄️ কেৱল লাইভ ডাটাবেচ' : '🗄️ Live Database Records'}</span>
+                <span>{lang === 'as' ? '🗄️ লাইভ ডাটাবেচ' : '🗄️ Database Records'}</span>
               </button>
             </div>
 
-            <div className="text-[11px] text-slate-400 px-3 py-1 rounded-lg bg-black/40 font-mono hidden md:block">
-              {backendSubView === 'both' && (lang === 'as' ? 'বেকএণ্ড প্ৰচেচিং আৰু ডাটাবেচ সংগ্ৰহ দুয়োটা সক্ৰিয়' : 'Unified: Backend Lifecycle + Live Database Collections')}
-              {backendSubView === 'backend' && (lang === 'as' ? 'কেৱল বেকএণ্ড এপিআই আৰু লাইভ অডিট ষ্ট্ৰীম' : 'Focused: Backend Architecture, APIs & Telemetry')}
-              {backendSubView === 'database' && (lang === 'as' ? 'কেৱল তথ্য তালিকা আৰু ফাইল সংৰক্ষণ' : 'Focused: Database Records & Storage Schema')}
+            <div className="flex items-center space-x-2">
+              <a
+                href="http://localhost:5001/logs"
+                target="_blank"
+                rel="noreferrer"
+                className="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 px-3 py-1.5 rounded-xl bg-emerald-950/80 border border-emerald-700/60 flex items-center space-x-1.5 transition-all shadow-sm"
+              >
+                <Terminal className="w-3.5 h-3.5" />
+                <span>http://localhost:5001/logs</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
           </div>
 
@@ -2583,9 +2617,12 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                 </div>
 
               </div>
+            </>
+          )}
 
-              {/* ================= LIVE REAL-TIME BACKEND ACTIVITY MONITOR & EVENT STREAM ================= */}
-          <div className="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 rounded-3xl border-2 border-emerald-500/50 p-4 sm:p-6 shadow-2xl space-y-4">
+          {/* ================= LIVE REAL-TIME BACKEND ACTIVITY MONITOR & EVENT STREAM ================= */}
+          {(backendSubView === 'both' || backendSubView === 'backend' || backendSubView === 'logs') && (
+            <div className="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 rounded-3xl border-2 border-emerald-500/50 p-4 sm:p-6 shadow-2xl space-y-4">
             
             {/* Top Header Strip */}
             <div className="flex flex-col xl:flex-row xl:items-center justify-between pb-4 border-b border-slate-800 gap-4">
@@ -2945,7 +2982,6 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
             </div>
 
           </div>
-            </>
           )}
 
           {/* ================= DATABASE COLLECTIONS & DISK RECORDS ================= */}

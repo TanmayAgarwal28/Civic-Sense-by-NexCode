@@ -11,7 +11,7 @@ import adminRouter from './routes/admin.js';
 import authRouter from './routes/auth.js';
 import workerRouter from './routes/worker.js';
 import { readDatabase } from './db/database.js';
-import { logActivity } from './db/activityLogger.js';
+import { logActivity, getActivityLogs } from './db/activityLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -103,9 +103,101 @@ app.get('/', (req, res) => {
     status: 'online',
     system: 'CivicSense Backend API',
     message: 'Backend server is running successfully! Access the web app at http://localhost:5173',
-    healthCheck: '/api/health'
+    healthCheck: '/api/health',
+    logs: '/logs'
   });
 });
+
+// Live Backend Logs Endpoint (Interactive HTML view in browser & JSON API)
+const escapeHtml = (value) => String(value).replace(/[&<>"']/g, (character) => ({
+  '&': '&amp;',
+  '<': '&lt;',
+  '>': '&gt;',
+  '"': '&quot;',
+  "'": '&#39;'
+})[character]);
+
+const sendLogsResponse = (req, res) => {
+  const format = req.query.format || (req.headers.accept?.includes('text/html') ? 'html' : 'json');
+  const logs = getActivityLogs(150);
+
+  if (format === 'html') {
+    const rows = logs.map(l => {
+      const statusColor = (l.status >= 500) ? '#f43f5e' : (l.status >= 400) ? '#fbbf24' : '#34d399';
+      return `
+        <tr style="border-bottom: 1px solid #1e293b; font-family: ui-monospace, SFMono-Regular, monospace; font-size: 12px;">
+          <td style="padding: 10px 14px; color: #94a3b8; white-space: nowrap;">${escapeHtml(l.timeFormatted || l.timestamp)}</td>
+          <td style="padding: 10px 14px;"><span style="background: #1e293b; color: #38bdf8; padding: 3px 8px; border-radius: 6px; font-weight: 700; font-size: 11px; border: 1px solid #334155;">${escapeHtml(l.action || 'LOG')}</span></td>
+          <td style="padding: 10px 14px; color: #f1f5f9; font-weight: 600;">${escapeHtml(l.title || '-')}</td>
+          <td style="padding: 10px 14px; color: #cbd5e1; max-width: 450px; word-break: break-word;">${escapeHtml(l.description || '-')}</td>
+          <td style="padding: 10px 14px; text-align: right;"><span style="color: ${statusColor}; font-weight: 700;">${escapeHtml(l.status || 200)}</span></td>
+        </tr>
+      `;
+    }).join('');
+
+    const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CivicSense Backend Logs</title>
+  <meta http-equiv="refresh" content="3">
+  <style>
+    body { background: #0b0f17; color: #f8fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; margin: 0; padding: 24px; }
+    .container { max-width: 1200px; margin: 0 auto; }
+    .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid #1e293b; }
+    .title-group { display: flex; align-items: center; gap: 12px; }
+    .badge { background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); padding: 4px 10px; border-radius: 999px; font-size: 11px; font-weight: 700; text-transform: uppercase; font-family: monospace; }
+    .btn { background: #1e293b; color: #38bdf8; text-decoration: none; padding: 8px 14px; border-radius: 8px; font-size: 12px; font-weight: 600; border: 1px solid #334155; transition: 0.2s; }
+    .btn:hover { background: #334155; }
+    table { width: 100%; border-collapse: collapse; background: #0f172a; border-radius: 12px; overflow: hidden; border: 1px solid #1e293b; }
+    th { background: #1e293b; color: #94a3b8; font-size: 11px; font-weight: 700; text-transform: uppercase; text-align: left; padding: 12px 14px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="title-group">
+        <h2 style="margin: 0; font-size: 20px;">⚡ CivicSense Backend Live Logs</h2>
+        <span class="badge">● Auto-Refreshing (3s)</span>
+      </div>
+      <div>
+        <a href="/logs?format=json" class="btn" target="_blank">{ } Raw JSON</a>
+        <a href="http://localhost:5173" class="btn" style="margin-left: 8px; color: #a7f3d0;">🌐 Open App</a>
+      </div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th>Time</th>
+          <th>Action</th>
+          <th>Title</th>
+          <th>Details</th>
+          <th style="text-align: right;">Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${rows || '<tr><td colspan="5" style="text-align: center; padding: 30px; color: #64748b;">No logs recorded yet.</td></tr>'}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>`;
+
+    return res.send(html);
+  }
+
+  res.json({
+    success: true,
+    count: logs.length,
+    timestamp: new Date().toISOString(),
+    data: logs,
+    logs
+  });
+};
+
+app.get('/logs', sendLogsResponse);
+app.get('/api/logs', sendLogsResponse);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {

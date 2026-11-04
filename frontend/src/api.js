@@ -983,11 +983,17 @@ export async function deleteDatabaseRecord(collection, id) {
 export async function fetchBackendActivity() {
   const localLogs = storage.get('civicsense_activity_logs', []);
   try {
-    const res = await safeFetch('/admin/activity');
-    if (res && res.data && Array.isArray(res.data)) {
+    let res = null;
+    try {
+      res = await safeFetch('/admin/activity');
+    } catch (e) {
+      res = await safeFetch('/logs?format=json');
+    }
+    const logList = res?.data || res?.logs;
+    if (logList && Array.isArray(logList)) {
       const seen = new Set();
       const merged = [];
-      for (const item of [...res.data, ...localLogs]) {
+      for (const item of [...logList, ...localLogs]) {
         const key = item.id || `${item.timestamp}_${item.action}`;
         if (!seen.has(key)) {
           seen.add(key);

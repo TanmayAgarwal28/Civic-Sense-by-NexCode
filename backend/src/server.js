@@ -39,7 +39,7 @@ app.use((req, res, next) => {
   const start = Date.now();
   res.on('finish', () => {
     const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
-    const isActivityLogEndpoint = req.path === '/api/admin/activity/log';
+    const isActivityLogEndpoint = req.path?.includes('/activity/log') || req.originalUrl?.includes('/activity/log');
     
     if (isActivityLogEndpoint) return;
 
@@ -141,6 +141,15 @@ const server = app.listen(CONFIG.PORT, () => {
 ║  • API Health Check: http://localhost:${CONFIG.PORT}/api/health              ║
 ╚════════════════════════════════════════════════════════════════════╝
   `);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ [CivicSense Error]: Port ${CONFIG.PORT} is already in use by another running process.`);
+    console.error(`   To resolve: Stop the other process or set PORT=<port> in backend/.env\n`);
+  } else {
+    console.error('[CivicSense Server Error]:', err);
+  }
 });
 
 export { app, server };

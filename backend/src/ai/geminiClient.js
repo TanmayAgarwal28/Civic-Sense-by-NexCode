@@ -17,8 +17,8 @@ export async function queryGeminiGenerativeModel({ prompt, imageBase64 = null, m
 
   if (imageBase64) {
     parts.push({
-      inline_data: {
-        mime_type: mimeType,
+      inlineData: {
+        mimeType: mimeType,
         data: imageBase64
       }
     });

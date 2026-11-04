@@ -30,8 +30,8 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-3xl border border-slate-300 max-w-3xl w-full max-h-[92vh] overflow-y-auto shadow-2xl flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-white rounded-3xl border border-slate-300 max-w-3xl w-full max-h-[92vh] overflow-y-auto shadow-2xl flex flex-col animate-scaleUp">
         
         {/* Modal Top Header */}
         <div className="sticky top-0 bg-slate-900 text-white p-5 rounded-t-3xl z-10 flex items-start justify-between border-b border-slate-800">

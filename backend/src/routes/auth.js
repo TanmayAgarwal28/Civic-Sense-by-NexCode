@@ -81,13 +81,18 @@ router.post('/student-register', (req, res) => {
       r.name.trim().toLowerCase() === cleanName
     );
 
-    if (rosterMatch) {
-      finalRoll = rosterMatch.rollNo;
-      finalName = rosterMatch.name;
-      finalDept = rosterMatch.department || 'Undergraduate Studies';
-      if (rosterMatch.phone) finalPhone = rosterMatch.phone;
-      rosterMatch.isClaimed = true;
+    if (!rosterMatch) {
+      return res.status(400).json({
+        success: false,
+        message: 'Admission verification failed: Roll No. or Student Name not found in official campus admission roster. Please contact campus administration.'
+      });
     }
+
+    finalRoll = rosterMatch.rollNo;
+    finalName = rosterMatch.name;
+    finalDept = rosterMatch.department || 'Undergraduate Studies';
+    if (rosterMatch.phone) finalPhone = rosterMatch.phone;
+    rosterMatch.isClaimed = true;
 
     // Check if username/roll already exists in users
     const allUsers = getAllUsers();

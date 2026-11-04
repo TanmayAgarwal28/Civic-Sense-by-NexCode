@@ -11,7 +11,7 @@ export const CONFIG = {
   PORT: process.env.PORT || 5001,
   NODE_ENV: process.env.NODE_ENV || 'development',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
-  GEMINI_MODEL: 'gemini-1.5-flash',
+  GEMINI_MODEL: process.env.GEMINI_MODEL || 'gemini-1.5-flash',
   DATA_DIR: path.join(__dirname, '../data'),
   UPLOADS_DIR: path.join(__dirname, '../uploads'),
   CAMPUS_NAME: {

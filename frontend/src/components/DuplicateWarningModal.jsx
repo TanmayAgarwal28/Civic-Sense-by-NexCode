@@ -8,8 +8,8 @@ export function DuplicateWarningModal({ isOpen, onClose, duplicate, onUpvoteExis
   if (!isOpen || !duplicate) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border-2 border-amber-500/70 rounded-2xl max-w-xl w-full p-6 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-slate-900 border-2 border-amber-500/70 rounded-3xl max-w-xl w-full p-5 sm:p-6 shadow-2xl animate-scaleUp">
         
         {/* Modal Header */}
         <div className="flex items-start space-x-3 pb-4 border-b border-slate-800">

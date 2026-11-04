@@ -317,8 +317,8 @@ export function WorkerPortal({ user, onTaskUpdated }) {
         const modalDesc = lang === 'as' ? activeBi.descriptionAs : activeBi.descriptionEn;
 
         return (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-            <div className="bg-white rounded-3xl border border-slate-300 max-w-lg w-full p-6 shadow-2xl max-h-[92vh] overflow-y-auto">
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+            <div className="bg-white rounded-3xl border border-slate-300 max-w-lg w-full p-5 sm:p-6 shadow-2xl max-h-[92vh] overflow-y-auto animate-scaleUp">
               <div className="flex items-center justify-between pb-3 border-b border-slate-200">
                 <h4 className="text-base font-bold text-slate-900">
                   {lang === 'as' ? `কাৰ্য্যসূচী আপডেট - #${activeTask.ticketId}` : `Work Order Update - #${activeTask.ticketId}`}

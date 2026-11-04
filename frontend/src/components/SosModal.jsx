@@ -47,8 +47,8 @@ export function SosModal({ isOpen, onClose }) {
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-slate-900 border-2 border-rose-500/80 rounded-3xl max-w-lg w-full p-6 shadow-2xl text-white">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-fadeIn">
+      <div className="bg-slate-900 border-2 border-rose-500/80 rounded-3xl max-w-lg w-full p-5 sm:p-6 shadow-2xl text-white animate-scaleUp">
         
         {/* Header */}
         <div className="flex items-center justify-between pb-3 border-b border-slate-800">

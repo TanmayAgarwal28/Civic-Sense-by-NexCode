@@ -122,8 +122,11 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'voiceNo
       category: classification.category
     }, existingIssues);
 
+    const isAnonymous = anonymous === true || anonymous === 'true';
+    const isIgnoreDuplicate = ignoreDuplicate === true || ignoreDuplicate === 'true';
+
     // If strong duplicate found and user hasn't explicitly clicked "Submit Anyway"
-    if (duplicateResults.hasDuplicates && !ignoreDuplicate && duplicateResults.topDuplicate?.similarity >= 85) {
+    if (duplicateResults.hasDuplicates && !isIgnoreDuplicate && duplicateResults.topDuplicate?.similarity >= 85) {
       return res.status(409).json({
         success: false,
         isDuplicate: true,
@@ -194,10 +197,10 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'voiceNo
       adminApprovalStatus,
       assignedWorkerId,
       assignedOfficer,
-      reporterId: anonymous ? null : reporterId,
-      reporterName: anonymous ? 'Anonymous Student' : reporterName,
+      reporterId: isAnonymous ? null : reporterId,
+      reporterName: isAnonymous ? 'Anonymous Student' : reporterName,
       reporterRole,
-      anonymous: Boolean(anonymous),
+      anonymous: isAnonymous,
       imageUrl: imageFile ? `/uploads/${imageFile.filename}` : null,
       voiceNoteUrl: voiceNoteUrl || null,
       visionAnalysis: imageAnalysis,

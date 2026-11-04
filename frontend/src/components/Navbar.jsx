@@ -50,44 +50,47 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
   };
 
   return (
-    <header className="bg-slate-900 text-white sticky top-0 z-40 shadow-xl border-b border-slate-800/80 backdrop-blur">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center justify-between h-20 sm:h-24 py-3">
+    <header className="bg-slate-900/95 text-white sticky top-0 z-40 shadow-xl border-b border-slate-800/80 backdrop-blur-md">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
+        <div className="flex items-center justify-between h-18 sm:h-22 py-2 sm:py-3">
           
           {/* Brand Logo & University Identity */}
           <div 
-            className="flex items-center space-x-3.5 cursor-pointer hover:opacity-95 transition-opacity pr-4" 
+            className="flex items-center space-x-3 cursor-pointer group pr-2" 
             onClick={() => setActiveTab(currentUser?.role === 'worker' ? 'worker' : 'report')}
           >
-            <img 
-              src="/civicsense-icon.png" 
-              alt="CivicSense Emblem" 
-              className="w-11 h-11 rounded-full object-contain drop-shadow-md flex-shrink-0" 
-            />
+            <div className="relative">
+              <img 
+                src="/civicsense-icon.png" 
+                alt="CivicSense Emblem" 
+                className="w-10 h-10 sm:w-11 sm:h-11 rounded-full object-contain ring-2 ring-emerald-500/40 shadow-md shadow-emerald-950/50 group-hover:scale-105 group-hover:ring-emerald-400 transition-all duration-200 flex-shrink-0" 
+              />
+              <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-slate-900 animate-pulse"></span>
+            </div>
             <div>
               <div className="flex items-center space-x-2">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-emerald-300 bg-clip-text text-transparent">
-                  {lang === 'as' ? 'নাগৰিক দৃষ্টি' : 'CivicSense'}
+                <h1 className="text-lg sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-emerald-300 bg-clip-text text-transparent group-hover:to-emerald-200 transition-all">
+                  {lang === 'as' ? 'চিভিকচেন্স' : 'CivicSense'}
                 </h1>
-                <span className="hidden lg:inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                <span className="hidden xl:inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
                   <Sparkles className="w-3 h-3 mr-1 text-emerald-400" />
                   {lang === 'as' ? 'স্মাৰ্ট চৌহদ' : 'Smart Campus'}
                 </span>
               </div>
-              <p className="text-xs text-slate-400 hidden sm:block mt-0.5 font-medium">
+              <p className="text-[11px] sm:text-xs text-slate-400 hidden sm:block mt-0.5 font-medium">
                 {lang === 'as' ? 'অসম ৰাজ্যিক বিশ্ববিদ্যালয় • চৌহদ নিৰাময় পৰ্টেল' : 'Assam State University • Campus Redressal'}
               </p>
             </div>
           </div>
 
-          {/* Navigation Tabs - Spacious, centered, clearly separated */}
-          <nav className="hidden md:flex items-center space-x-2 bg-slate-800/70 p-1.5 rounded-2xl border border-slate-700/60 shadow-inner">
+          {/* Navigation Tabs - Spacious, clearly separated, responsive */}
+          <nav className="hidden md:flex items-center space-x-1.5 lg:space-x-2 bg-slate-800/80 p-1.5 rounded-2xl border border-slate-700/60 shadow-inner">
             {currentUser?.role !== 'worker' && (
               <button
                 onClick={() => setActiveTab('report')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                   activeTab === 'report'
-                    ? 'bg-emerald-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/30'
                     : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
                 }`}
               >
@@ -99,22 +102,22 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
             {currentUser?.role === 'worker' && (
               <button
                 onClick={() => setActiveTab('worker')}
-                className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-2 ${
+                className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center space-x-1.5 cursor-pointer ${
                   activeTab === 'worker'
-                    ? 'bg-amber-600 text-white shadow-md'
+                    ? 'bg-gradient-to-r from-amber-600 to-orange-600 text-white shadow-md shadow-amber-900/30'
                     : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
                 }`}
               >
                 <Wrench className="w-3.5 h-3.5 text-amber-300" />
-                <span>{lang === 'as' ? 'মোৰ কাৰ্য্যসূচী' : 'My Assigned Dispatches'}</span>
+                <span>{lang === 'as' ? 'মোৰ কাৰ্য্যসূচী' : 'My Dispatches'}</span>
               </button>
             )}
 
             <button
               onClick={() => setActiveTab('browse')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeTab === 'browse'
-                  ? 'bg-emerald-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/30'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
               }`}
             >
@@ -123,66 +126,70 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
 
             <button
               onClick={() => setActiveTab('map')}
-              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+              className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 cursor-pointer ${
                 activeTab === 'map'
-                  ? 'bg-emerald-600 text-white shadow-md'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/30'
                   : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
               }`}
             >
               {t('campusMapTab')}
             </button>
 
-            {/* Admin Console & Backend Database Tabs (Strictly Admin only) */}
-            {currentUser?.role === 'admin' && (
-              <>
-                <button
-                  onClick={() => setActiveTab('admin')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                    activeTab === 'admin'
-                      ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-                  }`}
-                >
-                  <ShieldCheck className="w-4 h-4 text-indigo-400" />
-                  <span>{lang === 'as' ? 'প্ৰশাসক কনচোল' : 'Admin Console'}</span>
-                </button>
+            {/* Full-Stack Live Backend & Persistent Database Engine Console */}
+            <button
+              onClick={() => setActiveTab('database')}
+              className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center space-x-1.5 cursor-pointer ${
+                activeTab === 'database'
+                  ? 'bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-md shadow-emerald-900/40 ring-2 ring-emerald-400/50'
+                  : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+              }`}
+            >
+              <Database className="w-4 h-4 text-emerald-300 animate-pulse" />
+              <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & DB'}</span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono font-extrabold uppercase">LIVE</span>
+            </button>
 
-                <button
-                  onClick={() => setActiveTab('database')}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
-                    activeTab === 'database'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400/50'
-                      : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
-                  }`}
-                >
-                  <Database className="w-4 h-4 text-emerald-400 animate-pulse" />
-                  <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & Database'}</span>
-                </button>
-              </>
+            {/* Admin Console (Strictly for authenticated Admin) */}
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => setActiveTab('admin')}
+                className={`px-3.5 lg:px-4 py-2 rounded-xl text-xs font-bold transition-all duration-200 flex items-center space-x-1.5 cursor-pointer ${
+                  activeTab === 'admin'
+                    ? 'bg-gradient-to-r from-indigo-600 to-blue-600 text-white shadow-md shadow-indigo-900/30'
+                    : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
+                }`}
+              >
+                <ShieldCheck className="w-4 h-4 text-indigo-300" />
+                <span>{lang === 'as' ? 'প্ৰশাসক কনচোল' : 'Admin'}</span>
+              </button>
             )}
           </nav>
 
-          {/* Right Action Tools - Generously spaced out, not crammed */}
-          <div className="flex items-center space-x-3 sm:space-x-4 pl-4">
+          {/* Right Action Tools */}
+          <div className="flex items-center space-x-2 sm:space-x-3 pl-2">
             
-            {/* Language Switcher */}
+            {/* Tactile Language Switcher - Visual Toggle for Both Languages */}
             <button
               onClick={handleLanguageToggle}
-              title={lang === 'as' ? 'ভাষা সলনি কৰক' : 'Switch Language'}
-              className="flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-emerald-400 border border-slate-700 hover:border-emerald-500/50 transition-all shadow-sm cursor-pointer"
+              title={lang === 'as' ? 'Switch to English' : 'অসমীয়ালৈ সলনি কৰক'}
+              className="flex items-center space-x-1.5 px-3 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-slate-200 border border-slate-700 hover:border-emerald-500/50 transition-all duration-200 shadow-sm cursor-pointer group"
             >
-              <Globe className="w-4 h-4 text-emerald-400" />
-              <span>{lang === 'as' ? 'English' : 'অসমীয়া'}</span>
+              <Globe className="w-4 h-4 text-emerald-400 group-hover:rotate-12 transition-transform duration-300" />
+              <div className="flex items-center space-x-1 text-[11px] font-mono">
+                <span className={lang === 'en' ? 'text-emerald-400 font-extrabold' : 'text-slate-400'}>EN</span>
+                <span className="text-slate-600">|</span>
+                <span className={lang === 'as' ? 'text-emerald-400 font-extrabold font-assamese' : 'text-slate-400 font-assamese'}>অসমীয়া</span>
+              </div>
             </button>
 
             {/* Emergency SOS Hotline */}
             <button
               onClick={handleSosClick}
-              className="hidden lg:flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/80 shadow-md shadow-rose-600/20 animate-pulse cursor-pointer"
+              className="flex items-center space-x-1.5 px-2.5 sm:px-3.5 py-1.5 sm:py-2 rounded-xl text-xs font-bold bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white border border-rose-500/80 shadow-md shadow-rose-900/40 animate-emergency cursor-pointer transition-all active:scale-95"
               title={lang === 'as' ? 'চৌহদ জৰুৰীকালীন হটলাইন' : 'Campus Emergency Hotline'}
             >
-              <PhoneCall className="w-3.5 h-3.5" />
-              <span>SOS 24x7</span>
+              <PhoneCall className="w-3.5 h-3.5 animate-bounce" />
+              <span className="hidden sm:inline">SOS 24x7</span>
             </button>
 
             {/* Logged in User Profile or Login Trigger */}
@@ -283,35 +290,34 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
               <span>🗺️</span>
             </button>
 
-            {/* Admin Console & Backend Database in Mobile Menu (Strictly Admin only) */}
-            {currentUser?.role === 'admin' && (
-              <>
-                <button
-                  onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
-                  className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
-                    activeTab === 'admin' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center space-x-2">
-                    <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
-                    <span>{lang === 'as' ? 'প্ৰশাসক কনচোল' : 'Admin Console'}</span>
-                  </span>
-                  <span>🛡️</span>
-                </button>
+            {/* Backend & Live Database in Mobile Menu (Always accessible) */}
+            <button
+              onClick={() => { setActiveTab('database'); setMobileMenuOpen(false); }}
+              className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                activeTab === 'database' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
+              }`}
+            >
+              <span className="flex items-center space-x-2">
+                <Database className="w-3.5 h-3.5 text-emerald-400" />
+                <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & Live Database'}</span>
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[9px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono">LIVE</span>
+            </button>
 
-                <button
-                  onClick={() => { setActiveTab('database'); setMobileMenuOpen(false); }}
-                  className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
-                    activeTab === 'database' ? 'bg-emerald-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
-                  }`}
-                >
-                  <span className="flex items-center space-x-2">
-                    <Database className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & Database'}</span>
-                  </span>
-                  <span>🗄️</span>
-                </button>
-              </>
+            {/* Admin Console in Mobile Menu (Strictly Admin only) */}
+            {currentUser?.role === 'admin' && (
+              <button
+                onClick={() => { setActiveTab('admin'); setMobileMenuOpen(false); }}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center justify-between ${
+                  activeTab === 'admin' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-300 hover:bg-slate-800'
+                }`}
+              >
+                <span className="flex items-center space-x-2">
+                  <ShieldCheck className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>{lang === 'as' ? 'প্ৰশাসক কনচোল' : 'Admin Console'}</span>
+                </span>
+                <span>🛡️</span>
+              </button>
             )}
           </div>
 

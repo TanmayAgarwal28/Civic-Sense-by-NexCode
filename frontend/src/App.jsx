@@ -89,10 +89,13 @@ export default function App() {
     loadData();
   }, []);
 
-  // Strict role guard: non-admin roles can never access the database/backend tab
+  // Role guard for worker tab
   useEffect(() => {
-    if (activeTab === 'database' && currentUser?.role !== 'admin') {
-      setActiveTab(currentUser?.role === 'worker' ? 'worker' : 'report');
+    if (activeTab === 'worker' && currentUser?.role !== 'worker') {
+      setActiveTab('report');
+    }
+    if (activeTab === 'admin' && currentUser?.role !== 'admin') {
+      setActiveTab('report');
     }
   }, [currentUser, activeTab]);
 
@@ -170,7 +173,7 @@ export default function App() {
     <div className="min-h-screen flex flex-col bg-slate-100 font-sans selection:bg-emerald-500 selection:text-white">
       {/* Floating System Notification Toast */}
       {toastMessage && (
-        <div className="fixed top-20 right-6 z-50 bg-slate-900/95 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/30 flex items-center space-x-2.5 backdrop-blur animate-fade-in transition-all">
+        <div className="fixed top-20 left-4 right-4 sm:left-auto sm:right-6 z-50 bg-slate-900/95 text-white text-xs font-semibold px-4 py-3 rounded-2xl shadow-2xl border border-emerald-500/40 flex items-center space-x-2.5 backdrop-blur-md animate-fadeIn transition-all">
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
           <span>{toastMessage}</span>
         </div>
@@ -291,8 +294,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 6: Live Persistent Database Inspector (Strictly Admin Only) */}
-        {activeTab === 'database' && currentUser?.role === 'admin' && (
+        {/* Tab 6: Live Persistent Database & Backend Processing Engine (Full-Stack Inspector) */}
+        {activeTab === 'database' && (
           <div className="animate-fadeIn">
             <AdminDashboard
               issues={issues}
@@ -320,7 +323,7 @@ export default function App() {
                 />
                 <div>
                   <h4 className="font-extrabold text-white text-sm">
-                    {lang === 'as' ? 'নাগৰিক দৃষ্টি' : 'CivicSense Campus Redressal'}
+                    {lang === 'as' ? 'চিভিকচেন্স' : 'CivicSense Campus Redressal'}
                   </h4>
                   <p className="text-[11px] text-emerald-400 font-medium">
                     {lang === 'as' ? 'অসম ৰাজ্যিক বিশ্ববিদ্যালয়' : 'Assam State University'}

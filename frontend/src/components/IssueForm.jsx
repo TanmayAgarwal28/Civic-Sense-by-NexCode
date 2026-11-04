@@ -268,6 +268,39 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
 
       <form onSubmit={(e) => handleSubmit(e, false)} className="p-5 sm:p-7 space-y-5">
 
+        {/* Prominent Bilingual Voice Complaint Quick Action Banner */}
+        <div className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950 via-slate-900 to-teal-950 border-2 border-emerald-500/40 shadow-lg flex flex-col sm:flex-row items-center justify-between gap-4 animate-fadeIn">
+          <div className="flex items-center space-x-3.5">
+            <div className="p-3 rounded-2xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 shadow-md flex-shrink-0 animate-pulse">
+              <Mic className="w-6 h-6 text-emerald-400" />
+            </div>
+            <div>
+              <div className="flex items-center space-x-2">
+                <span className="font-extrabold text-sm sm:text-base text-white">
+                  {lang === 'as' ? 'মাইক্ৰ’ফোনৰে কথা কওক (অসমীয়া / English)' : 'Speak Your Complaint (Assamese / English)'}
+                </span>
+                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-400/20 text-emerald-300 border border-emerald-500/30 uppercase tracking-wider">
+                  AI Voice
+                </span>
+              </div>
+              <p className="text-xs text-slate-300 mt-0.5">
+                {lang === 'as'
+                  ? 'কথা কৈ অভিযোগ পঞ্জীয়ন কৰক। এআই দ্বাৰা স্বয়ংক্ৰিয়ভাৱে পাঠ্যলৈ ৰূপান্তৰ হ’ব আৰু কৰ্মীলৈ অডিঅ’ বাৰ্তা যাব।'
+                  : 'Speak naturally in English or Assamese. AI transcribes text, detects location, and attaches the audio note.'}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setVoiceModalOpen(true)}
+            className="w-full sm:w-auto px-5 py-2.5 rounded-xl font-black text-xs bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 shadow-lg shadow-emerald-500/30 flex items-center justify-center space-x-2 cursor-pointer transition-all active:scale-95 flex-shrink-0"
+          >
+            <Mic className="w-4 h-4 text-slate-950" />
+            <span>{lang === 'as' ? '🎙️ কণ্ঠস্বৰ ৰেকৰ্ডিং আৰম্ভ কৰক' : '🎙️ Start Voice Recording'}</span>
+          </button>
+        </div>
+
         {/* Suspended Student Access Alert */}
         {user?.role === 'student' && user?.isActive === false && (
           <div className="p-4 bg-rose-50 border-2 border-rose-300 text-rose-800 rounded-2xl flex items-center space-x-3">

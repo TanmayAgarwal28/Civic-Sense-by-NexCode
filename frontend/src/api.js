@@ -60,14 +60,23 @@ async function safeFetch(path, options = {}) {
 
 // ----------------- BACKEND HEALTH CHECK -----------------
 export async function checkBackendHealth() {
+  const t0 = performance.now();
   try {
-    const res = await fetch('http://localhost:5001/api/health', { method: 'GET', signal: AbortSignal.timeout(1500) });
+    const res = await fetch('http://localhost:5001/api/health', { method: 'GET', signal: AbortSignal.timeout(1800) });
     if (res.ok) {
       const data = await res.json();
-      return { online: true, data };
+      return { online: true, latency: Math.max(1, Math.round(performance.now() - t0)), data };
     }
-  } catch (e) {}
-  return { online: false };
+  } catch (e1) {
+    try {
+      const res = await fetch('/api/health', { method: 'GET', signal: AbortSignal.timeout(1800) });
+      if (res.ok) {
+        const data = await res.json();
+        return { online: true, latency: Math.max(1, Math.round(performance.now() - t0)), data };
+      }
+    } catch (e2) {}
+  }
+  return { online: false, latency: null };
 }
 
 // ----------------- AUTHENTICATION (FAIL-SAFE & OFFLINE RESILIENT) -----------------

@@ -28,7 +28,8 @@ import {
   deleteDatabaseEntryAdmin,
   fetchBackendActivity,
   clearBackendActivity,
-  logPortalActivity
+  logPortalActivity,
+  checkBackendHealth
 } from '../api.js';
 import { 
   ShieldCheck, AlertTriangle, Clock, CheckCircle2, FileText, 
@@ -199,30 +200,62 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
     }
   };
 
+  const [liveServerStatus, setLiveServerStatus] = useState({ online: false, checking: true, latency: null });
+
+  const verifyServerConnection = async () => {
+    try {
+      const res = await checkBackendHealth();
+      setLiveServerStatus({ online: Boolean(res?.online), checking: false, latency: res?.latency || 4, info: res?.data });
+      return Boolean(res?.online);
+    } catch (e) {
+      setLiveServerStatus({ online: false, checking: false, latency: null });
+      return false;
+    }
+  };
+
   const handlePingEndpoint = async (method, endpoint, description) => {
     const t0 = performance.now();
     let status = 200;
     let latency = 5;
+    let isOnline = false;
+
     try {
       if (method === 'GET') {
-        const res = await fetch(endpoint, { method: 'GET', signal: AbortSignal.timeout(3000) });
+        let res;
+        try {
+          res = await fetch(`http://localhost:5001${endpoint}`, { method: 'GET', signal: AbortSignal.timeout(2500) });
+        } catch (e1) {
+          res = await fetch(endpoint, { method: 'GET', signal: AbortSignal.timeout(2500) });
+        }
         status = res.status;
         latency = Math.max(1, Math.round(performance.now() - t0));
+        isOnline = res.ok;
       } else {
-        latency = Math.floor(Math.random() * 8 + 4);
+        const health = await checkBackendHealth();
+        isOnline = Boolean(health?.online);
+        status = isOnline ? 200 : 503;
+        latency = health?.latency || Math.floor(Math.random() * 8 + 4);
       }
     } catch (e) {
+      status = 503;
       latency = Math.max(1, Math.round(performance.now() - t0));
+      isOnline = false;
     }
 
-    logPortalActivity({
-      action: `API_PROBE_${method}`,
-      title: `Live REST Route Probe: ${method} ${endpoint}`,
-      description: `Backend endpoint health check executed (${description}). Response: ${status} OK (${latency}ms). HTTP/1.1 via Port 5001.`,
-      diskFile: 'backend/data/issues.json',
-      data: { method, endpoint, description, status, durationMs: latency, protocol: 'HTTP/1.1' }
-    });
-    showToast(lang === 'as' ? `${method} ${endpoint} সংকেত সফলতাৰে পৰীক্ষা কৰা হ’ল (${status} OK • ${latency}ms)` : `${method} ${endpoint} probe verified (${status} OK • ${latency}ms)`);
+    if (isOnline) {
+      setLiveServerStatus({ online: true, checking: false, latency });
+      logPortalActivity({
+        action: `API_PROBE_${method}`,
+        title: `Live REST Route Probe: ${method} ${endpoint}`,
+        description: `Backend endpoint health check executed (${description}). Response: ${status} OK (${latency}ms). HTTP/1.1 via Port 5001.`,
+        diskFile: 'backend/data/issues.json',
+        data: { method, endpoint, description, status, durationMs: latency, protocol: 'HTTP/1.1' }
+      });
+      showToast(lang === 'as' ? `${method} ${endpoint} সংকেত সফলতাৰে পৰীক্ষা কৰা হ’ল (${status} OK • ${latency}ms)` : `${method} ${endpoint} probe verified (${status} OK • ${latency}ms)`);
+    } else {
+      setLiveServerStatus({ online: false, checking: false, latency: null });
+      showToast(lang === 'as' ? `চাৰ্ভাৰ অফলাইন (প’ৰ্ট ৫০০১ সংযোগ নাই)। অনুগ্ৰহ কৰি "npm start --prefix backend" চলাওক।` : `Backend offline on port 5001. Start it via "npm start --prefix backend"`);
+    }
   };
 
   // User & Roster Edit Modals
@@ -266,6 +299,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
   useEffect(() => {
     loadAdminData();
     loadActivityLogs();
+    verifyServerConnection();
   }, []);
 
   // Instant real-time listener for all portal activity events (ID creation, reports, updates, deletes)
@@ -277,6 +311,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
       loadActivityLogs();
       if (activeAdminTab === 'database') {
         loadRawDatabase();
+        verifyServerConnection();
       }
     };
     window.addEventListener('civicsense_new_activity', handleNewActivity);
@@ -323,10 +358,11 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
     if (activeAdminTab === 'database') {
       loadRawDatabase();
       loadActivityLogs();
+      verifyServerConnection();
     }
   }, [activeAdminTab]);
 
-  // Live polling for activity logs while on database tab or admin console
+  // Live polling for activity logs and backend health while on database tab or admin console
   useEffect(() => {
     let interval = null;
     if (activityAutoRefresh) {
@@ -334,6 +370,7 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
         loadActivityLogs();
         if (activeAdminTab === 'database') {
           loadRawDatabase();
+          verifyServerConnection();
         }
       }, 2500);
     }
@@ -1032,13 +1069,24 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
         {activeAdminTab === 'database' ? (
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-950/70 rounded-2xl p-4 border border-slate-800/80">
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
-                <Server className="w-5 h-5 animate-pulse" />
+              <div className={`p-2.5 rounded-xl border flex-shrink-0 ${
+                liveServerStatus.online
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+              }`}>
+                <Server className={`w-5 h-5 ${liveServerStatus.online ? 'animate-pulse text-emerald-400' : 'text-rose-400'}`} />
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'as' ? 'চাৰ্ভাৰ সংযোগ' : 'Live Server'}</div>
                 <div className="text-xs font-mono font-bold text-white truncate">http://localhost:5001</div>
-                <div className="text-[10px] text-emerald-400 font-bold">● 100% Online (Port 5001)</div>
+                {liveServerStatus.online ? (
+                  <div className="text-[10px] text-emerald-400 font-bold flex items-center space-x-1">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-ping inline-block mr-1"></span>
+                    <span>● Online ({liveServerStatus.latency}ms • Port 5001)</span>
+                  </div>
+                ) : (
+                  <div className="text-[10px] text-rose-400 font-bold">● Offline (Port 5001 Stopped)</div>
+                )}
               </div>
             </div>
 
@@ -2207,13 +2255,21 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
           {/* Admin System & Database Health Diagnostic Cockpit */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 bg-slate-900/80 p-3.5 sm:p-4 rounded-2xl border border-slate-800 shadow-lg">
             <div className="flex items-center space-x-3">
-              <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex-shrink-0">
-                <Cpu className="w-5 h-5" />
+              <div className={`p-2.5 rounded-xl border flex-shrink-0 ${
+                liveServerStatus.online
+                  ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20'
+                  : 'bg-rose-500/10 text-rose-400 border-rose-500/20'
+              }`}>
+                <Cpu className={`w-5 h-5 ${liveServerStatus.online ? 'text-emerald-400' : 'text-rose-400'}`} />
               </div>
               <div className="min-w-0">
                 <div className="text-[10px] text-slate-400 font-bold uppercase">{lang === 'as' ? 'চাৰ্ভাৰ ইঞ্জিন' : 'Server Engine'}</div>
                 <div className="text-xs font-mono font-bold text-white truncate">Node.js Express 4.x</div>
-                <div className="text-[10px] text-emerald-400">● 100% Operational (5001)</div>
+                {liveServerStatus.online ? (
+                  <div className="text-[10px] text-emerald-400">● Operational (Port 5001)</div>
+                ) : (
+                  <div className="text-[10px] text-rose-400 font-bold">● Stopped (Port 5001 Offline)</div>
+                )}
               </div>
             </div>
 
@@ -2251,6 +2307,38 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
             </div>
           </div>
 
+          {/* Real-time Server Offline Notice Banner */}
+          {!liveServerStatus.online && (
+            <div className="bg-amber-950/60 border border-amber-500/50 rounded-2xl p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-lg animate-fadeIn">
+              <div className="flex items-start space-x-3">
+                <AlertTriangle className="w-5 h-5 text-amber-400 flex-shrink-0 mt-0.5" />
+                <div>
+                  <div className="font-bold text-amber-200 text-sm">
+                    {lang === 'as' ? 'বেকএণ্ড চাৰ্ভাৰ বৰ্তমান অফলাইন (প’ৰ্ট ৫০০১ বন্ধ হৈ আছে)' : 'Backend Server Process is Currently Stopped (Port 5001 Offline)'}
+                  </div>
+                  <p className="text-slate-300 text-xs mt-1 leading-relaxed">
+                    {lang === 'as'
+                      ? 'লাইভ এপিআই অনুৰোধ আৰু ডিস্ক সংৰক্ষণৰ বাবে বেকএণ্ড চাৰ্ভাৰ চলোৱা আৱশ্যক। টাৰ্মিনেলত তলৰ নিৰ্দেশটো চলাওক:'
+                      : 'To execute live REST API queries, real-time AI triage, and atomic disk writes, start the Node backend:'}
+                  </p>
+                  <code className="inline-block mt-1.5 px-2.5 py-1 rounded bg-black/60 border border-slate-700 text-emerald-400 font-mono text-[11px]">
+                    npm start --prefix backend
+                  </code>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 flex-shrink-0">
+                <button
+                  type="button"
+                  onClick={verifyServerConnection}
+                  className="px-3.5 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs cursor-pointer transition-all flex items-center space-x-1.5 shadow-md"
+                >
+                  <RefreshCw className="w-3.5 h-3.5" />
+                  <span>{lang === 'as' ? 'সংযোগ পুনৰ পৰীক্ষা কৰক' : 'Check Port 5001'}</span>
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* ================= BACKEND ENGINE & HOW EVERYTHING WORKS ================= */}
           {(backendSubView === 'both' || backendSubView === 'backend') && (
             <>
@@ -2281,9 +2369,13 @@ export function AdminDashboard({ issues = [], analytics = {}, onRefresh, initial
                   </div>
 
                   <div className="flex items-center space-x-2">
-                    <span className="inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-emerald-950/80 text-emerald-400 border border-emerald-500/40">
-                      <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping mr-1.5"></span>
-                      API Gateway 100% OK
+                    <span className={`inline-flex items-center px-2.5 py-1 rounded-xl text-xs font-mono font-bold border ${
+                      liveServerStatus.online
+                        ? 'bg-emerald-950/80 text-emerald-400 border-emerald-500/40'
+                        : 'bg-rose-950/80 text-rose-400 border-rose-500/40'
+                    }`}>
+                      <span className={`w-2 h-2 rounded-full mr-1.5 ${liveServerStatus.online ? 'bg-emerald-400 animate-ping' : 'bg-rose-400'}`}></span>
+                      {liveServerStatus.online ? 'API Gateway 100% OK' : 'API Gateway Offline'}
                     </span>
                   </div>
                 </div>

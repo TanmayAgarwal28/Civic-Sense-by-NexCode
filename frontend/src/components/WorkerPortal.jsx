@@ -4,7 +4,7 @@ import { fetchWorkerTasks, updateWorkerTask } from '../api.js';
 import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { 
   Wrench, CheckCircle2, Clock, AlertTriangle, MapPin, 
-  Upload, ShieldAlert, Sparkles, Filter, RefreshCw 
+  Upload, ShieldAlert, Sparkles, Filter, RefreshCw, Volume2, Mic 
 } from 'lucide-react';
 
 export function WorkerPortal({ user, onTaskUpdated }) {
@@ -107,9 +107,11 @@ export function WorkerPortal({ user, onTaskUpdated }) {
       <div className="bg-gradient-to-r from-amber-900 via-slate-900 to-slate-900 text-white p-6 rounded-3xl border border-amber-800/60 shadow-xl">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center space-x-3.5">
-            <div className="p-3 bg-amber-500/20 text-amber-400 rounded-2xl border border-amber-500/30">
-              <Wrench className="w-6 h-6" />
-            </div>
+            <img 
+              src="/civicsense-icon.png" 
+              alt="CivicSense Emblem" 
+              className="w-11 h-11 rounded-full object-contain drop-shadow-md flex-shrink-0" 
+            />
             <div>
               <div className="flex items-center space-x-2">
                 <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 uppercase">
@@ -273,6 +275,17 @@ export function WorkerPortal({ user, onTaskUpdated }) {
                       <img src={task.imageUrl} alt="Damage evidence" className="w-full h-full object-cover" />
                     </div>
                   )}
+
+                  {/* Audio Voice Note Player from Student */}
+                  {task.voiceNoteUrl && (
+                    <div className="mb-3 p-2.5 rounded-xl bg-emerald-50 border border-emerald-300/80 text-emerald-950 flex flex-col space-y-1.5 shadow-xs">
+                      <div className="flex items-center space-x-1.5 text-[11px] font-bold text-emerald-800">
+                        <Volume2 className="w-3.5 h-3.5 text-emerald-600 flex-shrink-0 animate-pulse" />
+                        <span>{lang === 'as' ? 'ছাত্ৰৰ কণ্ঠস্বৰ বাৰ্তা (Voice Note Audio):' : 'Student Audio Voice Note:'}</span>
+                      </div>
+                      <audio controls src={task.voiceNoteUrl} className="w-full h-7 rounded" />
+                    </div>
+                  )}
                 </div>
 
                 {/* Card Footer Actions */}
@@ -329,6 +342,17 @@ export function WorkerPortal({ user, onTaskUpdated }) {
                 {activeTask.address && (
                   <div className="pt-2 border-t border-slate-200 text-[11px] text-amber-800 font-medium">
                     📍 <strong>{lang === 'as' ? 'সঠিক ঠিকনা:' : 'Address:'}</strong> {activeTask.address} ({activeTask.location})
+                  </div>
+                )}
+
+                {/* Voice Note Audio inside Modal */}
+                {activeTask.voiceNoteUrl && (
+                  <div className="pt-2 border-t border-slate-200">
+                    <span className="block text-[11px] font-bold text-emerald-800 mb-1 flex items-center space-x-1">
+                      <Volume2 className="w-3.5 h-3.5 text-emerald-600" />
+                      <span>{lang === 'as' ? 'ছাত্ৰৰ কণ্ঠস্বৰ বাৰ্তা (Voice Recording):' : 'Student Voice Recording:'}</span>
+                    </span>
+                    <audio controls src={activeTask.voiceNoteUrl} className="w-full h-8" />
                   </div>
                 )}
               </div>

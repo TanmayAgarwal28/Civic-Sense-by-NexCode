@@ -11,6 +11,7 @@ import adminRouter from './routes/admin.js';
 import authRouter from './routes/auth.js';
 import workerRouter from './routes/worker.js';
 import { readDatabase } from './db/database.js';
+import { logActivity } from './db/activityLogger.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -24,6 +25,74 @@ app.use(express.urlencoded({ extended: true, limit: '25mb' }));
 
 // Static uploads directory
 app.use('/uploads', express.static(CONFIG.UPLOADS_DIR));
+
+// Automated Server Telemetry Logger (captures all mutating API requests & authentication)
+app.use((req, res, next) => {
+  if (
+    req.path.startsWith('/uploads') || 
+    req.path.startsWith('/favicon') ||
+    (req.method === 'GET' && (req.path === '/api/admin/activity' || req.path === '/api/health'))
+  ) {
+    return next();
+  }
+
+  const start = Date.now();
+  res.on('finish', () => {
+    const isMutation = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method);
+    const isActivityLogEndpoint = req.path === '/api/admin/activity/log';
+    
+    if (isActivityLogEndpoint) return;
+
+    if (isMutation || req.path.includes('/auth/')) {
+      let action = `${req.method}_${req.path.replace(/\//g, '_').toUpperCase()}`;
+      let title = `Backend API: ${req.method} ${req.path}`;
+      let type = 'API_TRANSACTION';
+
+      if (req.path.includes('/auth/login')) {
+        action = 'USER_LOGIN';
+        title = `User Authenticated (${req.body?.role || 'user'})`;
+        type = 'AUTH';
+      } else if (req.path.includes('/student-register')) {
+        action = 'STUDENT_ACCOUNT_CREATED';
+        title = `Student Registered: ${req.body?.name || ''} (${req.body?.rollNo || ''})`;
+        type = 'IDENTITY';
+      } else if (req.path === '/api/issues' && req.method === 'POST') {
+        action = 'NEW_COMPLAINT_REGISTERED';
+        title = `New Grievance Submitted to Campus Redressal`;
+        type = 'GRIEVANCE';
+      } else if (req.path.includes('/upvote')) {
+        action = 'STUDENT_UPVOTE';
+        title = `Student Endorsement / Upvote Recorded`;
+        type = 'ENGAGEMENT';
+      } else if (req.path.includes('/worker/tasks')) {
+        action = 'WORKER_FIELD_UPDATE';
+        title = `Technician Updated Task Work Order`;
+        type = 'WORKER';
+      } else if (req.method === 'DELETE') {
+        action = 'DATABASE_RECORD_DELETED';
+        title = `Database Permanent Delete Executed: ${req.path}`;
+        type = 'DATABASE';
+      }
+
+      logActivity({
+        action,
+        type,
+        title,
+        description: `HTTP ${req.method} ${req.path} • Status: ${res.statusCode} (${Date.now() - start}ms) • IP: ${req.ip || '127.0.0.1'}`,
+        diskFile: 'backend/data/issues.json',
+        status: res.statusCode,
+        data: {
+          method: req.method,
+          path: req.path,
+          statusCode: res.statusCode,
+          durationMs: Date.now() - start
+        }
+      });
+    }
+  });
+
+  next();
+});
 
 // Initialize database on boot
 readDatabase();

@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import path from 'path';
 import { CONFIG } from '../config.js';
 import { getAllIssues, getIssueById, createIssue, updateIssue, upvoteIssue, getSettings, getAllUsers } from '../db/database.js';
 import { classifyComplaint } from '../ai/classifier.js';
@@ -8,9 +9,20 @@ import { generateBilingualSummary } from '../ai/summarizer.js';
 import { analyzeCampusImage } from '../ai/visionAnalyzer.js';
 import { isAssamese } from '../ai/assameseNlp.js';
 import { autoTranslateComplaint } from '../ai/translator.js';
+import { logActivity } from '../db/activityLogger.js';
 
 const router = express.Router();
-const upload = multer({ dest: CONFIG.UPLOADS_DIR });
+
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, CONFIG.UPLOADS_DIR);
+  },
+  filename: (req, file, cb) => {
+    const ext = path.extname(file.originalname) || ((file.mimetype && file.mimetype.includes('audio')) || file.fieldname === 'voiceNote' ? '.webm' : '.jpg');
+    cb(null, `${file.fieldname}-${Date.now()}-${Math.round(Math.random() * 1e9)}${ext}`);
+  }
+});
+const upload = multer({ storage });
 
 // GET all issues with filtering & search
 router.get('/', (req, res) => {
@@ -66,8 +78,8 @@ router.get('/:id', (req, res) => {
   }
 });
 
-// POST submit new issue (Multimodal + AI classification + Duplicate Check + Address)
-router.post('/', upload.single('image'), async (req, res) => {
+// POST submit new issue (Multimodal Image + Audio Voice Note + AI Triage + Address)
+router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'voiceNote', maxCount: 1 }]), async (req, res) => {
   try {
     const {
       title,
@@ -87,12 +99,15 @@ router.post('/', upload.single('image'), async (req, res) => {
       return res.status(400).json({ success: false, message: 'Title and description are required.' });
     }
 
-    const file = req.file;
+    const imageFile = req.files?.image?.[0] || req.file;
+    const voiceFile = req.files?.voiceNote?.[0];
+    const voiceNoteUrl = voiceFile ? `/uploads/${voiceFile.filename}` : (req.body.voiceNoteUrl || null);
+
     const textComb = `${title} ${description} ${address}`;
     const detectedLang = isAssamese(textComb) ? 'as' : 'en';
 
     // 1. Multimodal image analysis
-    const imageAnalysis = file ? analyzeCampusImage(file, textComb) : null;
+    const imageAnalysis = imageFile ? analyzeCampusImage(imageFile, textComb) : null;
 
     // 2. AI Classification & Priority
     const classification = classifyComplaint(textComb, imageAnalysis, category);
@@ -183,7 +198,8 @@ router.post('/', upload.single('image'), async (req, res) => {
       reporterName: anonymous ? 'Anonymous Student' : reporterName,
       reporterRole,
       anonymous: Boolean(anonymous),
-      imageUrl: file ? `/uploads/${file.filename}` : null,
+      imageUrl: imageFile ? `/uploads/${imageFile.filename}` : null,
+      voiceNoteUrl: voiceNoteUrl || null,
       visionAnalysis: imageAnalysis,
       summary,
       actionPlan: summary.actionPlan,
@@ -191,6 +207,25 @@ router.post('/', upload.single('image'), async (req, res) => {
         linkedTicketId: duplicateResults.topDuplicate.ticketId,
         similarity: duplicateResults.topDuplicate.similarity
       } : null
+    });
+
+    // Log to live Backend Activity Stream & persist on disk
+    logActivity({
+      action: 'NEW_COMPLAINT_REGISTERED',
+      type: 'TRANSACTION',
+      title: `New Grievance Registered: ${created.ticketId}`,
+      description: `${created.title} (${created.location}${created.address ? ' - ' + created.address : ''}) • Priority: ${created.priority.toUpperCase()}${voiceNoteUrl ? ' • 🎙️ Audio Voice Note Attached' : ''}`,
+      diskFile: 'backend/data/issues.json',
+      status: 201,
+      data: {
+        id: created.id,
+        ticketId: created.ticketId,
+        priority: created.priority,
+        category: created.category,
+        language: created.language,
+        hasVoiceNote: Boolean(voiceNoteUrl),
+        voiceNoteUrl
+      }
     });
 
     res.status(201).json({
@@ -211,6 +246,17 @@ router.post('/:id/upvote', (req, res) => {
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Issue not found' });
     }
+
+    logActivity({
+      action: 'STUDENT_UPVOTE',
+      type: 'PORTAL_EVENT',
+      title: `Student Upvoted Grievance ${updated.ticketId}`,
+      description: `Community endorsement increased to ${updated.upvotes} upvotes.`,
+      diskFile: 'backend/data/issues.json',
+      status: 200,
+      data: { ticketId: updated.ticketId, upvotes: updated.upvotes }
+    });
+
     res.json({ success: true, data: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -233,6 +279,16 @@ router.patch('/:id/status', upload.single('resolutionProof'), (req, res) => {
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Issue not found' });
     }
+
+    logActivity({
+      action: 'STATUS_UPDATED',
+      type: 'LIFECYCLE',
+      title: `Issue ${updated.ticketId} Status Changed to "${updated.status}"`,
+      description: `Updated by ${assignedOfficer || 'Staff'}${resolutionNotes ? ': ' + resolutionNotes : ''}`,
+      diskFile: 'backend/data/issues.json',
+      status: 200,
+      data: { ticketId: updated.ticketId, status: updated.status }
+    });
 
     res.json({ success: true, data: updated });
   } catch (err) {

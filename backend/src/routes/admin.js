@@ -25,6 +25,7 @@ import {
   updateIssue 
 } from '../db/database.js';
 import { generateOfficialNotice } from '../ai/noticeGenerator.js';
+import { logActivity, getActivityLogs, clearActivityLogs } from '../db/activityLogger.js';
 
 const router = express.Router();
 
@@ -42,6 +43,17 @@ router.post('/generate-notice', (req, res) => {
     }
 
     const notice = generateOfficialNotice(issue, resolutionNotes, officerName);
+
+    logActivity({
+      action: 'NOTICE_ISSUED',
+      type: 'NOTICE',
+      title: `Official Bilingual Notice Generated for ${issue.ticketId}`,
+      description: `Bilingual resolution dispatch signed by ${officerName || 'Administration'}. Stored for public verification.`,
+      diskFile: 'backend/data/issues.json',
+      status: 200,
+      data: { ticketId: issue.ticketId, noticeRef: notice.dispatchNumber }
+    });
+
     res.json({ success: true, data: notice });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -55,6 +67,17 @@ router.delete('/issues/:id', (req, res) => {
     if (!deleted) {
       return res.status(404).json({ success: false, message: 'Issue not found or could not be deleted' });
     }
+
+    logActivity({
+      action: 'WORK_ORDER_DELETED',
+      type: 'ADMIN_ACTION',
+      title: `Admin Deleted Work Order: ${req.params.id}`,
+      description: `Work order permanently removed from database issues record.`,
+      diskFile: 'backend/data/issues.json',
+      status: 200,
+      data: { id: req.params.id }
+    });
+
     res.json({ success: true, message: 'Work order deleted permanently by Admin.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -71,6 +94,17 @@ router.patch('/issues/:id/approve-dispatch', (req, res) => {
       assignedOfficer,
       assignedWorkerId
     });
+
+    logActivity({
+      action: 'ADMIN_DISPATCH_APPROVED',
+      type: 'TRIAGE',
+      title: `Admin Approved & Dispatched: ${updated ? updated.ticketId : req.params.id}`,
+      description: `Dispatched to ${assignedOfficer || 'Technician Crew'}. Status set to 'assigned'.`,
+      diskFile: 'backend/data/issues.json',
+      status: 200,
+      data: { id: req.params.id, assignedOfficer }
+    });
+
     res.json({ success: true, message: 'Grievance approved and dispatched to worker crew.', data: updated });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -141,6 +175,17 @@ router.post('/workers', (req, res) => {
     });
 
     const { password: _, ...safeWorker } = worker;
+
+    logActivity({
+      action: 'WORKER_CREATED',
+      type: 'STAFF_MANAGEMENT',
+      title: `Worker Profile Created: ${worker.name} (${worker.username})`,
+      description: `Assigned Department: ${worker.department}. Profile committed to users table.`,
+      diskFile: 'backend/data/issues.json',
+      status: 201,
+      data: { username: worker.username, name: worker.name, department: worker.department }
+    });
+
     res.status(201).json({
       success: true,
       message: 'Worker profile created successfully.',
@@ -169,6 +214,16 @@ router.post('/roster', (req, res) => {
     if (!success) {
       return res.status(400).json({ success: false, message: 'This Roll No. already exists in the admission roster.' });
     }
+
+    logActivity({
+      action: 'ROSTER_STUDENT_ADDED',
+      type: 'IDENTITY_ROSTER',
+      title: `Student Enrolled in Roster: ${name.trim()} (${rollNo.trim().toUpperCase()})`,
+      description: `Department: ${department || 'General Academic'}. Pre-admission record verified and saved on disk.`,
+      diskFile: 'backend/data/issues.json',
+      status: 201,
+      data: { rollNo: rollNo.trim().toUpperCase(), name: name.trim() }
+    });
 
     res.status(201).json({
       success: true,
@@ -348,6 +403,15 @@ router.delete('/database/:collection/:id', (req, res) => {
     if (!deleted) {
       return res.status(404).json({ success: false, message: `Record not found in ${collection}` });
     }
+
+    logActivity({
+      action: 'DATABASE_RECORD_DELETED',
+      type: 'DISK_WRITE',
+      title: `Deleted record "${id}" from [${collection}]`,
+      description: `Permanent modification committed to backend/data/issues.json. Collection: ${collection}.`,
+      diskFile: 'backend/data/issues.json'
+    });
+
     res.json({
       success: true,
       message: `Record ${id} successfully deleted from ${collection}.`
@@ -361,7 +425,54 @@ router.delete('/database/:collection/:id', (req, res) => {
 router.post('/reset-data', (req, res) => {
   try {
     const freshData = resetDatabase();
+    logActivity({
+      action: 'DATABASE_RESET',
+      type: 'SYSTEM',
+      title: 'Database Reset to Clean Demo State',
+      description: 'Persistent store reset with verified DU issues and campus roster records.',
+      diskFile: 'backend/data/issues.json'
+    });
     res.json({ success: true, message: 'Database reset to demo state.', data: freshData });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ---------------- LIVE BACKEND ACTIVITY MONITOR ----------------
+router.get('/activity', (req, res) => {
+  try {
+    const logs = getActivityLogs(200);
+    res.json({
+      success: true,
+      count: logs.length,
+      data: logs
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/activity/log', (req, res) => {
+  try {
+    const { action, title, description, diskFile, data } = req.body;
+    const logged = logActivity({
+      action: action || 'USER_ACTION',
+      type: 'PORTAL_EVENT',
+      title: title || 'Campus User Event',
+      description: description || '',
+      diskFile: diskFile || 'backend/data/issues.json',
+      data
+    });
+    res.json({ success: true, data: logged });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/activity/clear', (req, res) => {
+  try {
+    clearActivityLogs();
+    res.json({ success: true, message: 'Activity logs cleared.' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

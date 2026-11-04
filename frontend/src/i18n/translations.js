@@ -136,10 +136,10 @@ export const TRANSLATIONS = {
     adminTabUsers: 'Student & Worker Management',
     adminTabCategories: 'Dynamic Categories & Locations',
     adminTabSettings: 'AI Dispatch Policy Setting',
-    adminTabDatabase: 'Live Database Console',
+    adminTabDatabase: 'Backend & Live Database Engine',
 
     // Live Database Console
-    dbConsoleTitle: 'Campus Database Management Console',
+    dbConsoleTitle: 'CivicSense Backend Engine & Live Database Console',
     dbLiveStorage: 'Live Disk Storage',
     dbPhysicalFile: 'Physical File',
     dbPersistNotice: 'Disk changes persist immediately',
@@ -366,10 +366,10 @@ export const TRANSLATIONS = {
     adminTabUsers: 'ছাত্ৰ আৰু কৰ্মচাৰী ব্যৱস্থাপনা',
     adminTabCategories: 'শ্ৰেণী আৰু মানচিত্ৰ স্থান নিৰ্ধাৰণ',
     adminTabSettings: 'এআই নিৰ্দেশনা নীতি নিৰ্ধাৰণ',
-    adminTabDatabase: 'পোনপটীয়া তথ্যভঁৰাল পৰিদৰ্শন',
+    adminTabDatabase: 'বেকএণ্ড আৰু লাইভ ডাটাবেচ কনচোল',
 
     // Live Database Console
-    dbConsoleTitle: 'চৌহদ তথ্যভঁৰাল নিয়ন্ত্ৰণ কেন্দ্ৰ',
+    dbConsoleTitle: 'চিভিকচেন্স বেকএণ্ড ইঞ্জিন আৰু ডাটাবেচ নিয়ন্ত্ৰণ কেন্দ্ৰ',
     dbLiveStorage: 'পোনপটীয়া ডিস্ক সঞ্চয়স্থল',
     dbPhysicalFile: 'ডিস্ক সংৰক্ষিত ফাইল',
     dbPersistNotice: 'তথ্যৰ পৰিৱৰ্তন লগে লগে ডিস্কত সংৰক্ষিত হয়',

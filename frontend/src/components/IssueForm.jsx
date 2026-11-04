@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
 import { submitIssue, preCheckTriage, fetchCategories, fetchLocations } from '../api.js';
 import { AssameseKeyboardHelper } from './AssameseKeyboardHelper.jsx';
+import { VoiceComplaintModal } from './VoiceComplaintModal.jsx';
 import { quickTranslateText, isAssameseText } from '../utils/bilingualTranslator.js';
 import { Sparkles, Image as ImageIcon, Mic, MapPin, Send, AlertCircle, Home, CheckCircle2, RefreshCw, Languages } from 'lucide-react';
 
@@ -18,6 +19,8 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
   const [reporterName, setReporterName] = useState(user?.name || 'Student Member');
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [voiceFile, setVoiceFile] = useState(null);
+  const [voicePreviewUrl, setVoicePreviewUrl] = useState(null);
 
   // Dynamic Categories and Locations from backend
   const [categoriesList, setCategoriesList] = useState([]);
@@ -27,8 +30,11 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
   const [preCheckLoading, setPreCheckLoading] = useState(false);
   const [preCheckData, setPreCheckData] = useState(null);
   const [showKeyboardHelper, setShowKeyboardHelper] = useState(false);
+  const [voiceModalOpen, setVoiceModalOpen] = useState(false);
   const [activeInputFocus, setActiveInputFocus] = useState('title'); // 'title' or 'desc' or 'address'
   const [formError, setFormError] = useState('');
+
+  const isSpeechSupported = typeof window !== 'undefined' && Boolean(window.SpeechRecognition || window.webkitSpeechRecognition);
 
   useEffect(() => {
     if (user?.name) {
@@ -126,19 +132,19 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
     }
   };
 
-  const handleVoiceSimulation = () => {
-    if (lang === 'as') {
-      setTitle('হোষ্টেল ৪-ৰ ৩য় মহলাত পানীৰ পাইপ ফাটিছে');
-      setDescription('হোষ্টেল ৪-ৰ ৩য় মহলাৰ বাথৰুমত পানীৰ পাইপ ফাটি পানী ওলাই আছে আৰু বিজুলীৰ ছুইটচৰ ওচৰলৈ গৈছে। অতি সোনকালে কাৰিকৰী দল প্ৰেৰণ কৰক।');
-      setAddress('হোষ্টেল ৪, ৩য় মহলা, বাথৰুম নং ৩০২, পূব দিশ');
-      setLocation('Boys Hostels (Hostels 1-5)');
-      setZoneId('hostel_boys');
-    } else {
-      setTitle('Water pipe bursting near electrical switch in Hostel 4');
-      setDescription('Water leaking continuously from washroom tap on 3rd floor of Boys Hostel 4, dangerously close to main switchboard.');
-      setAddress('Boys Hostel 4, 3rd Floor, Washroom 302, East Wing');
-      setLocation('Boys Hostels (Hostels 1-5)');
-      setZoneId('hostel_boys');
+  const handleApplyVoiceComplaint = ({ title: vTitle, description: vDesc, location: vLoc, zoneId: vZone, address: vAddr, voiceFile: vFile, audioBlobUrl: vUrl }) => {
+    if (vTitle) setTitle(vTitle);
+    if (vDesc) setDescription(vDesc);
+    if (vAddr) setAddress(vAddr);
+    if (vZone) {
+      setZoneId(vZone);
+      if (vLoc) setLocation(vLoc);
+    }
+    if (vFile) {
+      setVoiceFile(vFile);
+    }
+    if (vUrl) {
+      setVoicePreviewUrl(vUrl);
     }
   };
 
@@ -195,6 +201,10 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
         fd.append('image', imageFile);
       }
 
+      if (voiceFile instanceof File || voiceFile instanceof Blob) {
+        fd.append('voiceNote', voiceFile, 'voiceNote.webm');
+      }
+
       const res = await submitIssue(fd);
       if (res.success) {
         setTitle('');
@@ -202,6 +212,8 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
         setAddress('');
         setImageFile(null);
         setImagePreview(null);
+        setVoiceFile(null);
+        setVoicePreviewUrl(null);
         setPreCheckData(null);
         setFormError('');
         onIssueCreated(res.data);
@@ -240,15 +252,17 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
             </p>
           </div>
 
-          <button
-            type="button"
-            onClick={handleVoiceSimulation}
-            className="flex items-center space-x-1.5 px-3 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all self-start"
-            title={lang === 'as' ? 'কণ্ঠস্বৰ দ্বাৰা দাখিল' : 'Voice Note Simulation'}
-          >
-            <Mic className="w-4 h-4 text-emerald-300 animate-pulse" />
-            <span>{lang === 'as' ? 'কণ্ঠস্বৰ দ্বাৰা দাখিল' : 'Voice Note Simulation'}</span>
-          </button>
+          {isSpeechSupported && (
+            <button
+              type="button"
+              onClick={() => setVoiceModalOpen(true)}
+              className="flex items-center space-x-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-white/10 hover:bg-white/20 text-white border border-white/20 transition-all self-start cursor-pointer shadow-sm hover:shadow"
+              title={lang === 'as' ? 'কণ্ঠস্বৰ দ্বাৰা অভিযোগ দাখিল কৰক' : 'Record grievance via voice'}
+            >
+              <Mic className="w-4 h-4 text-emerald-300 animate-pulse" />
+              <span>{lang === 'as' ? 'কণ্ঠস্বৰ অভিযোগ' : 'Voice Complaint'}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -458,6 +472,36 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
               </div>
             </div>
           )}
+
+          {/* Attached Audio Voice Note Player */}
+          {voicePreviewUrl && (
+            <div className="mt-3 p-3 bg-emerald-950/70 border border-emerald-500/60 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-white animate-fadeIn">
+              <div className="flex items-center space-x-2.5">
+                <div className="p-2 bg-emerald-500/20 text-emerald-400 rounded-xl border border-emerald-500/30 flex-shrink-0">
+                  <Mic className="w-4 h-4 animate-pulse" />
+                </div>
+                <div>
+                  <p className="font-bold text-emerald-300">
+                    {lang === 'as' ? 'সংযুক্ত কণ্ঠস্বৰ বাৰ্তা (Audio Voice Note Attached)' : 'Attached Audio Voice Note'}
+                  </p>
+                  <p className="text-[11px] text-slate-300">
+                    {lang === 'as' ? 'এই অডিঅ’ কাৰিকৰী কৰ্মী আৰু প্ৰশাসনিক পেনেললৈ প্ৰেৰণ কৰা হ’ব' : 'Physical voice recording will be sent to Worker & Admin portals'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2 w-full sm:w-auto justify-end">
+                <audio controls src={voicePreviewUrl} className="h-8 max-w-[210px]" />
+                <button
+                  type="button"
+                  onClick={() => { setVoiceFile(null); setVoicePreviewUrl(null); }}
+                  className="text-xs text-rose-400 hover:text-rose-300 p-1.5 hover:bg-rose-950/60 rounded-lg cursor-pointer"
+                  title="Remove Voice Note"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Real-time AI Pre-Check Panel */}
@@ -566,6 +610,15 @@ export function IssueForm({ user, onIssueCreated, onDuplicateDetected }) {
         </button>
 
       </form>
+
+      {/* Real Voice Complaint Audio Modal */}
+      <VoiceComplaintModal
+        isOpen={voiceModalOpen}
+        onClose={() => setVoiceModalOpen(false)}
+        onApplyComplaint={handleApplyVoiceComplaint}
+        lang={lang}
+        locationsList={locationsList}
+      />
 
     </div>
   );

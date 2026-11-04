@@ -9,6 +9,7 @@ backend/dist/
 !.env.example
 backend/data/issues.json
 backend/data/issues.json.tmp
+backend/data/activity_log.json
 backend/uploads/*
 !backend/uploads/.gitkeep
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { useLanguage } from './context/LanguageContext.jsx';
-import { fetchIssues, fetchAnalytics, upvoteIssue } from './api.js';
+import { fetchIssues, fetchAnalytics, upvoteIssue, logUserLogout, logPortalActivity } from './api.js';
 import { Navbar } from './components/Navbar.jsx';
 import { HeroBanner } from './components/HeroBanner.jsx';
 import { IssueForm } from './components/IssueForm.jsx';
@@ -89,6 +89,13 @@ export default function App() {
     loadData();
   }, []);
 
+  // Strict role guard: non-admin roles can never access the database/backend tab
+  useEffect(() => {
+    if (activeTab === 'database' && currentUser?.role !== 'admin') {
+      setActiveTab(currentUser?.role === 'worker' ? 'worker' : 'report');
+    }
+  }, [currentUser, activeTab]);
+
   const handleLoginSuccess = (user) => {
     setCurrentUser(user);
     if (user.role === 'admin') setActiveTab('admin');
@@ -97,6 +104,9 @@ export default function App() {
   };
 
   const handleLogout = () => {
+    if (currentUser) {
+      logUserLogout(currentUser);
+    }
     setCurrentUser(null);
     localStorage.removeItem('civicsense_current_user');
     setAuthModalOpen(true);
@@ -113,6 +123,13 @@ export default function App() {
   };
 
   const handleDuplicateDetected = (data) => {
+    logPortalActivity({
+      action: 'DUPLICATE_INCIDENT_FLAGGED',
+      title: `AI Flagged Potential Duplicate Issue: "${data?.title || 'Report'}"`,
+      description: `High similarity match (${data?.similarity || 90}%) detected against existing work order.`,
+      diskFile: 'backend/data/issues.json',
+      data
+    });
     setDuplicateData(data);
     setDuplicateModalOpen(true);
   };
@@ -274,8 +291,8 @@ export default function App() {
           </div>
         )}
 
-        {/* Tab 6: Live Persistent Database Inspector */}
-        {activeTab === 'database' && (
+        {/* Tab 6: Live Persistent Database Inspector (Strictly Admin Only) */}
+        {activeTab === 'database' && currentUser?.role === 'admin' && (
           <div className="animate-fadeIn">
             <AdminDashboard
               issues={issues}
@@ -296,7 +313,11 @@ export default function App() {
             {/* Column 1: University & System Identity */}
             <div>
               <div className="flex items-center space-x-2.5 mb-3">
-                <span className="text-2xl">🏛️</span>
+                <img 
+                  src="/civicsense-icon.png" 
+                  alt="CivicSense Emblem" 
+                  className="w-11 h-11 rounded-full object-contain drop-shadow-md flex-shrink-0" 
+                />
                 <div>
                   <h4 className="font-extrabold text-white text-sm">
                     {lang === 'as' ? 'নাগৰিক দৃষ্টি' : 'CivicSense Campus Redressal'}

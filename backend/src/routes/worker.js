@@ -2,6 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import { CONFIG } from '../config.js';
 import { getAllIssues, updateIssue, getAllUsers } from '../db/database.js';
+import { logActivity } from '../db/activityLogger.js';
 
 const router = express.Router();
 const upload = multer({ dest: CONFIG.UPLOADS_DIR });
@@ -44,6 +45,20 @@ router.patch('/tasks/:id', upload.single('resolutionProof'), (req, res) => {
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Issue not found' });
     }
+
+    logActivity({
+      action: 'WORKER_FIELD_UPDATE',
+      type: 'FIELD_WORKER',
+      title: `Maintenance Worker Updated Task: ${updated.ticketId}`,
+      description: `Task status changed to "${updated.status}" by ${workerName || 'Assigned Technician'}${resolutionNotes ? ' • Note: ' + resolutionNotes : ''}${file ? ' • 📸 Resolution Proof Uploaded' : ''}`,
+      diskFile: 'backend/data/issues.json',
+      status: 200,
+      data: {
+        ticketId: updated.ticketId,
+        status: updated.status,
+        workerName: workerName || 'Worker'
+      }
+    });
 
     res.json({
       success: true,

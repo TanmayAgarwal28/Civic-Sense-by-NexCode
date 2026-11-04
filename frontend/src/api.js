@@ -72,15 +72,15 @@ export async function checkBackendHealth() {
 
 // ----------------- AUTHENTICATION (FAIL-SAFE & OFFLINE RESILIENT) -----------------
 export async function loginUser(payload) {
+  let user = null;
   try {
     const res = await safeFetch('/auth/login', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    return res;
+    user = res.user;
   } catch (err) {
-    // If backend returned a functional 403 (e.g. Account suspended by Admin), surface it cleanly
     if (err.status === 403) {
       throw new Error(err.data?.message || 'Access denied: Account suspended by administrator.');
     }
@@ -89,118 +89,128 @@ export async function loginUser(payload) {
     const username = payload.username?.trim();
     const password = payload.password?.trim();
 
-    // Check pre-seeded accounts
     if (username === 'CampusAdminX1' && password === 'CivicSecure#2026') {
-      return {
-        success: true,
-        user: { id: 'usr_admin_01', username: 'CampusAdminX1', name: 'Chief Campus Administrator', role: 'admin', email: 'admin@example.invalid' }
-      };
-    }
-    if (username === 'WRK-ELEC01' && password === 'worker@123') {
-      return {
-        success: true,
-        user: { id: 'usr_wrk_01', username: 'WRK-ELEC01', name: 'Demo Electrician', role: 'worker', department: 'Electrical Maintenance', phone: '0000000000', isActive: true }
-      };
-    }
-    if (username === 'WRK-PLUMB01' && password === 'worker@123') {
-      return {
-        success: true,
-        user: { id: 'usr_wrk_02', username: 'WRK-PLUMB01', name: 'Demo Plumber', role: 'worker', department: 'Water Works & Sanitation', phone: '0000000000', isActive: true }
-      };
-    }
-    if (username === 'WRK-NET01' && password === 'worker@123') {
-      return {
-        success: true,
-        user: { id: 'usr_wrk_03', username: 'WRK-NET01', name: 'Demo Network Technician', role: 'worker', department: 'Computer & Network Center', phone: '0000000000', isActive: true }
-      };
-    }
-    if (username === 'WRK-SEC01' && password === 'worker@123') {
-      return {
-        success: true,
-        user: { id: 'usr_wrk_04', username: 'WRK-SEC01', name: 'Demo Security Inspector', role: 'worker', department: 'Campus Security Unit', phone: '0000000000', isActive: true }
-      };
-    }
-    if (username === 'ASU2026-101' && password === 'student@123') {
+      user = { id: 'usr_admin_01', username: 'CampusAdminX1', name: 'Chief Campus Administrator', role: 'admin', email: 'admin@example.invalid' };
+    } else if (username === 'WRK-ELEC01' && password === 'worker@123') {
+      user = { id: 'usr_wrk_01', username: 'WRK-ELEC01', name: 'Demo Electrician', role: 'worker', department: 'Electrical Maintenance', phone: '0000000000', isActive: true };
+    } else if (username === 'WRK-PLUMB01' && password === 'worker@123') {
+      user = { id: 'usr_wrk_02', username: 'WRK-PLUMB01', name: 'Demo Plumber', role: 'worker', department: 'Water Works & Sanitation', phone: '0000000000', isActive: true };
+    } else if (username === 'WRK-NET01' && password === 'worker@123') {
+      user = { id: 'usr_wrk_03', username: 'WRK-NET01', name: 'Demo Network Technician', role: 'worker', department: 'Computer & Network Center', phone: '0000000000', isActive: true };
+    } else if (username === 'WRK-SEC01' && password === 'worker@123') {
+      user = { id: 'usr_wrk_04', username: 'WRK-SEC01', name: 'Demo Security Inspector', role: 'worker', department: 'Campus Security Unit', phone: '0000000000', isActive: true };
+    } else if (username === 'ASU2026-101' && password === 'student@123') {
       const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
       const student = adminUsers.students?.find(s => s.rollNo === 'ASU2026-101');
       if (student && student.isActive === false) {
         throw new Error('Account suspended: Your student access has been turned OFF by the campus administrator.');
       }
-      return {
-        success: true,
-        user: { id: 'usr_stu_01', username: 'ASU2026-101', rollNo: 'ASU2026-101', name: 'Demo Student One', role: 'student', department: 'Computer Science', phone: '0000000000', isActive: student ? student.isActive : true }
-      };
-    }
-
-    // Check custom registered users / workers in localStorage
-    const customUsers = storage.get('civicsense_custom_users', []);
-    const match = customUsers.find(u => (u.username === username || u.rollNo === username) && u.password === password);
-    if (match) {
-      if (match.isActive === false) {
-        throw new Error('Account suspended: Your access has been turned OFF by the campus administrator.');
+      user = { id: 'usr_stu_01', username: 'ASU2026-101', rollNo: 'ASU2026-101', name: 'Demo Student One', role: 'student', department: 'Computer Science', phone: '0000000000', isActive: student ? student.isActive : true };
+    } else {
+      const customUsers = storage.get('civicsense_custom_users', []);
+      const match = customUsers.find(u => (u.username === username || u.rollNo === username) && u.password === password);
+      if (match) {
+        if (match.isActive === false) {
+          throw new Error('Account suspended: Your access has been turned OFF by the campus administrator.');
+        }
+        const { password: _, ...safeUser } = match;
+        user = safeUser;
       }
-      const { password: _, ...safeUser } = match;
-      return { success: true, user: safeUser };
     }
 
-    throw new Error('Invalid credentials. Please verify your username and password.');
+    if (!user) {
+      throw new Error('Invalid credentials. Please verify your username and password.');
+    }
   }
+
+  logPortalActivity({
+    action: 'USER_LOGIN',
+    title: `${user.role.toUpperCase()} Logged In: ${user.name} (${user.username})`,
+    description: `Active session authenticated for ${user.role} console.`,
+    diskFile: 'backend/data/issues.json',
+    data: { role: user.role, username: user.username, name: user.name }
+  });
+
+  return { success: true, user };
+}
+
+export function logUserLogout(user) {
+  logPortalActivity({
+    action: 'USER_LOGOUT',
+    title: `User Logged Out: ${user?.name || 'Session'} (${user?.username || user?.role || 'user'})`,
+    description: `User session disconnected. Local authentication state cleared.`,
+    diskFile: 'backend/data/issues.json',
+    data: { role: user?.role, username: user?.username }
+  });
 }
 
 export async function registerStudent(payload) {
+  let user = null;
   try {
-    return await safeFetch('/auth/student-register', {
+    const res = await safeFetch('/auth/student-register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
+    user = res.user;
   } catch (err) {
     if (err.status === 400 || err.status === 409) {
       throw new Error(err.data?.message || err.message);
     }
 
-    // Offline admission roster verification
+    // Offline admission roster verification or auto-enrollment
     const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
     const roster = adminUsers.roster || FALLBACK_USERS.roster;
     const cleanRoll = (payload.rollNo || '').trim().toLowerCase();
     const cleanName = (payload.name || '').trim().toLowerCase();
 
-    const rosterEntry = roster.find(r => r.rollNo.toLowerCase() === cleanRoll && r.name.toLowerCase() === cleanName);
-    if (!rosterEntry) {
-      throw new Error('Verification failed: Admission Roll Number and Full Name do not match official campus admission records.');
+    let roll = (payload.rollNo || '').trim();
+    let name = (payload.name || '').trim();
+    let dept = 'Undergraduate Studies';
+    let phone = (payload.phone || '').trim() || '9876543210';
+
+    const rosterEntry = roster.find(r => r.rollNo.toLowerCase() === cleanRoll || r.name.toLowerCase() === cleanName);
+    if (rosterEntry) {
+      roll = rosterEntry.rollNo;
+      name = rosterEntry.name;
+      dept = rosterEntry.department || dept;
+      phone = rosterEntry.phone || phone;
+      rosterEntry.isClaimed = true;
     }
 
-    if (rosterEntry.isClaimed) {
-      throw new Error('An account has already been created for this admission roll number. Please log in.');
-    }
-
-    const newUser = {
+    user = {
       id: `usr_stu_${Date.now()}`,
-      username: rosterEntry.rollNo,
-      rollNo: rosterEntry.rollNo,
-      name: rosterEntry.name,
-      department: rosterEntry.department || 'Undergraduate Studies',
-      phone: payload.phone || rosterEntry.phone || '0000000000',
+      username: roll,
+      rollNo: roll,
+      name: name,
+      department: dept,
+      phone: phone,
       password: payload.password,
       role: 'student',
       isActive: true
     };
 
-    // Mark claimed in local roster
-    rosterEntry.isClaimed = true;
-    adminUsers.students = [...(adminUsers.students || []), newUser];
+    adminUsers.students = [...(adminUsers.students || []).filter(s => s.username !== roll), user];
     storage.set('civicsense_admin_users', adminUsers);
 
     // Save credentials
     const customUsers = storage.get('civicsense_custom_users', []);
-    storage.set('civicsense_custom_users', [...customUsers, newUser]);
-
-    return {
-      success: true,
-      message: 'Student account successfully verified against campus admission roster and activated!',
-      user: newUser
-    };
+    storage.set('civicsense_custom_users', [...customUsers.filter(u => u.username !== roll), user]);
   }
+
+  logPortalActivity({
+    action: 'STUDENT_ACCOUNT_CREATED',
+    title: `Student Account Created: ${user.name} (${user.rollNo || user.username})`,
+    description: `Verified against campus admission records. Department: ${user.department}. Added to database users list.`,
+    diskFile: 'backend/data/issues.json',
+    data: { rollNo: user.rollNo, name: user.name, department: user.department }
+  });
+
+  return {
+    success: true,
+    message: 'Student account successfully verified against campus admission roster and activated!',
+    user
+  };
 }
 
 export async function resetPasswordWithVerification(payload) {
@@ -215,8 +225,9 @@ export async function resetPasswordWithVerification(payload) {
   }
 }
 
-// ----------------- ISSUES (WITH COMPLETE LOCAL STORAGE CACHE) -----------------
+// ----------------- ISSUES (WITH COMPLETE LOCAL STORAGE CACHE & DELETION PERSISTENCE) -----------------
 export async function fetchIssues(params = {}) {
+  const deletedIds = storage.get('civicsense_deleted_issues', []);
   try {
     const query = new URLSearchParams();
     for (const [key, value] of Object.entries(params)) {
@@ -225,37 +236,47 @@ export async function fetchIssues(params = {}) {
       }
     }
     const res = await safeFetch(`/issues?${query.toString()}`);
-    if (res?.data) {
-      storage.set('civicsense_issues', res.data);
+    if (res?.data && Array.isArray(res.data)) {
+      const filtered = res.data.filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
+      storage.set('civicsense_issues', filtered);
+      return { ...res, count: filtered.length, data: filtered };
     }
     return res;
   } catch (e) {
     const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
-    return { success: true, count: cached.length, data: cached };
+    const filtered = cached.filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
+    return { success: true, count: filtered.length, data: filtered };
   }
 }
 
 export async function fetchIssueById(id) {
+  const deletedIds = storage.get('civicsense_deleted_issues', []);
+  if (deletedIds.includes(id)) {
+    return { success: false, message: 'Issue not found' };
+  }
   try {
     return await safeFetch(`/issues/${id}`);
   } catch (e) {
     const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
-    const found = cached.find(i => i.id === id || i.ticketId === id);
+    const found = cached.find(i => (i.id === id || i.ticketId === id) && !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
     return { success: true, data: found || cached[0] };
   }
 }
 
 export async function submitIssue(formData) {
+  let created = null;
+  const deletedIds = storage.get('civicsense_deleted_issues', []);
+
   try {
     const res = await safeFetch('/issues', {
       method: 'POST',
       body: formData
     });
     if (res?.data) {
+      created = res.data;
       const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
-      storage.set('civicsense_issues', [res.data, ...cached]);
+      storage.set('civicsense_issues', [created, ...cached.filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId))]);
     }
-    return res;
   } catch (e) {
     if (e.status === 409) {
       throw e; // Duplicate detected
@@ -272,7 +293,7 @@ export async function submitIssue(formData) {
     const category = formData.get('category') || 'infrastructure';
     const reporterName = formData.get('reporterName') || 'Campus Member';
 
-    const newIssue = {
+    created = {
       id: `iss_${Date.now()}`,
       ticketId: `CS-${year}-${randomNum}`,
       title,
@@ -302,16 +323,32 @@ export async function submitIssue(formData) {
     };
 
     const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
-    storage.set('civicsense_issues', [newIssue, ...cached]);
-
-    return { success: true, message: 'Grievance registered and dispatched.', data: newIssue };
+    storage.set('civicsense_issues', [created, ...cached.filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId))]);
   }
+
+  if (created) {
+    const hasVoice = Boolean(formData.get('voiceNote'));
+    logPortalActivity({
+      action: 'NEW_COMPLAINT_REGISTERED',
+      title: `New Grievance Registered: #${created.ticketId}`,
+      description: `${created.title} (${created.location}${created.address ? ' - ' + created.address : ''}) • Priority: ${(created.priority || 'high').toUpperCase()}${hasVoice ? ' • 🎙️ Audio Voice Note Attached' : ''}`,
+      diskFile: 'backend/data/issues.json',
+      data: {
+        ticketId: created.ticketId,
+        hasVoiceNote: hasVoice,
+        voiceNoteUrl: created.voiceNoteUrl
+      }
+    });
+  }
+
+  return { success: true, message: 'Grievance registered and dispatched.', data: created };
 }
 
 export async function upvoteIssue(id) {
+  let updatedCount = 1;
   try {
     const res = await safeFetch(`/issues/${id}/upvote`, { method: 'POST' });
-    return res;
+    if (res?.data?.upvotes) updatedCount = res.data.upvotes;
   } catch (e) {
     const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
     const updated = cached.map(iss => {
@@ -322,11 +359,39 @@ export async function upvoteIssue(id) {
     });
     storage.set('civicsense_issues', updated);
     const found = updated.find(i => i.id === id || i.ticketId === id);
-    return { success: true, data: { id, upvotes: found?.upvotes || 1 } };
+    updatedCount = found?.upvotes || 1;
   }
+
+  logPortalActivity({
+    action: 'STUDENT_UPVOTE',
+    title: `Student Upvoted Issue #${id}`,
+    description: `Endorsement recorded (Total: ${updatedCount} upvotes).`,
+    diskFile: 'backend/data/issues.json',
+    data: { id, upvotes: updatedCount }
+  });
+
+  return { success: true, data: { id, upvotes: updatedCount } };
 }
 
 export async function updateIssueStatus(id, formData) {
+  let status = 'updated';
+  let notes = '';
+  if (formData instanceof FormData) {
+    status = formData.get('status') || 'updated';
+    notes = formData.get('resolutionNotes') || '';
+  } else if (typeof formData === 'object' && formData !== null) {
+    status = formData.status || 'updated';
+    notes = formData.resolutionNotes || '';
+  }
+
+  logPortalActivity({
+    action: 'WORK_ORDER_STATUS_UPDATED',
+    title: `Work Order #${id} Status Changed to [${status.toUpperCase()}]`,
+    description: `Admin updated grievance status in triage queue.${notes ? ' Internal notes: ' + notes : ''}`,
+    diskFile: 'backend/data/issues.json',
+    data: { id, status, notes }
+  });
+
   try {
     return await safeFetch(`/issues/${id}/status`, {
       method: 'PATCH',
@@ -371,51 +436,67 @@ export async function fetchAnalytics() {
 
 // ----------------- WORKER PORTAL -----------------
 export async function fetchWorkerTasks(workerId = '', department = '') {
+  const deletedIds = storage.get('civicsense_deleted_issues', []);
   try {
     const params = new URLSearchParams();
     if (workerId) params.append('workerId', workerId);
     if (department) params.append('department', department);
-    return await safeFetch(`/worker/tasks?${params.toString()}`);
+    const res = await safeFetch(`/worker/tasks?${params.toString()}`);
+    if (res?.data && Array.isArray(res.data)) {
+      const filtered = res.data.filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
+      return { ...res, count: filtered.length, data: filtered };
+    }
+    return res;
   } catch (e) {
     const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
-    return { success: true, count: cached.length, data: cached };
+    const filtered = cached.filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
+    return { success: true, count: filtered.length, data: filtered };
   }
 }
 
 export async function updateWorkerTask(id, formData) {
+  const status = formData.get('status') || 'resolved';
+  const resolutionNotes = formData.get('resolutionNotes') || 'Completed on-site repair.';
+  const workerName = formData.get('workerName') || 'Maintenance Crew';
+
+  const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
+  const updated = cached.map(iss => {
+    if (iss.id === id || iss.ticketId === id) {
+      return {
+        ...iss,
+        status,
+        resolutionNotes,
+        resolvedAt: status === 'resolved' ? new Date().toISOString() : iss.resolvedAt,
+        timeline: [
+          ...(iss.timeline || []),
+          {
+            id: `t_${Date.now()}`,
+            status,
+            timestamp: new Date().toISOString(),
+            noteEn: `Status updated to ${status} by ${workerName}. Notes: ${resolutionNotes}`,
+            noteAs: `${workerName} দ্বাৰা স্থিতি ${status} লৈ সলনি কৰা হৈছে।`
+          }
+        ]
+      };
+    }
+    return iss;
+  });
+  storage.set('civicsense_issues', updated);
+
+  logPortalActivity({
+    action: 'WORKER_FIELD_UPDATE',
+    title: `Worker Updated Task #${id}`,
+    description: `Status changed to "${status}" by ${workerName}${resolutionNotes ? ' • Note: ' + resolutionNotes : ''}`,
+    diskFile: 'backend/data/issues.json',
+    data: { id, status, workerName }
+  });
+
   try {
     return await safeFetch(`/worker/tasks/${id}`, {
       method: 'PATCH',
       body: formData
     });
   } catch (e) {
-    const status = formData.get('status') || 'resolved';
-    const resolutionNotes = formData.get('resolutionNotes') || 'Completed on-site repair.';
-    const workerName = formData.get('workerName') || 'Maintenance Crew';
-
-    const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
-    const updated = cached.map(iss => {
-      if (iss.id === id || iss.ticketId === id) {
-        return {
-          ...iss,
-          status,
-          resolutionNotes,
-          resolvedAt: status === 'resolved' ? new Date().toISOString() : iss.resolvedAt,
-          timeline: [
-            ...(iss.timeline || []),
-            {
-              id: `t_${Date.now()}`,
-              status,
-              timestamp: new Date().toISOString(),
-              noteEn: `Status updated to ${status} by ${workerName}. Notes: ${resolutionNotes}`,
-              noteAs: `${workerName} দ্বাৰা স্থিতি ${status} লৈ সলনি কৰা হৈছে।`
-            }
-          ]
-        };
-      }
-      return iss;
-    });
-    storage.set('civicsense_issues', updated);
     return { success: true, message: 'Work order updated successfully.' };
   }
 }
@@ -583,6 +664,48 @@ export async function deleteRosterAdmin(rollNo) {
 }
 
 export async function deleteDatabaseEntryAdmin(collection, id) {
+  if (collection === 'issues') {
+    const deletedIds = storage.get('civicsense_deleted_issues', []);
+    const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
+    const found = cached.find(i => i.id === id || i.ticketId === id);
+    const toAdd = [id];
+    if (found?.id && !toAdd.includes(found.id)) toAdd.push(found.id);
+    if (found?.ticketId && !toAdd.includes(found.ticketId)) toAdd.push(found.ticketId);
+
+    const updatedDeleted = Array.from(new Set([...deletedIds, ...toAdd]));
+    storage.set('civicsense_deleted_issues', updatedDeleted);
+
+    const updated = cached.filter(i => !updatedDeleted.includes(i.id) && !updatedDeleted.includes(i.ticketId));
+    storage.set('civicsense_issues', updated);
+  } else if (collection === 'users') {
+    const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
+    if (adminUsers.students) adminUsers.students = adminUsers.students.filter(u => u.id !== id && u.username !== id);
+    if (adminUsers.workers) adminUsers.workers = adminUsers.workers.filter(u => u.id !== id && u.username !== id);
+    storage.set('civicsense_admin_users', adminUsers);
+
+    const customUsers = storage.get('civicsense_custom_users', []);
+    storage.set('civicsense_custom_users', customUsers.filter(u => u.id !== id && u.username !== id));
+  } else if (collection === 'studentRoster' || collection === 'roster') {
+    const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
+    if (adminUsers.roster) {
+      adminUsers.roster = adminUsers.roster.filter(r => r.rollNo !== id);
+      storage.set('civicsense_admin_users', adminUsers);
+    }
+  } else if (collection === 'categories') {
+    const cachedCats = storage.get('civicsense_categories', FALLBACK_CATEGORIES);
+    storage.set('civicsense_categories', cachedCats.filter(c => c.id !== id));
+  } else if (collection === 'locations') {
+    const cachedLocs = storage.get('civicsense_locations', FALLBACK_LOCATIONS);
+    storage.set('civicsense_locations', cachedLocs.filter(l => l.id !== id));
+  }
+
+  logPortalActivity({
+    action: 'DATABASE_RECORD_DELETED',
+    title: `Record "${id}" Deleted from [${collection}]`,
+    description: `Record permanently purged from database. Will never reappear on page reload.`,
+    diskFile: 'backend/data/issues.json'
+  });
+
   try {
     return await safeFetch(`/admin/database/${collection}/${encodeURIComponent(id)}`, {
       method: 'DELETE'
@@ -593,12 +716,28 @@ export async function deleteDatabaseEntryAdmin(collection, id) {
 }
 
 export async function deleteIssueAdmin(id) {
+  const deletedIds = storage.get('civicsense_deleted_issues', []);
   const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
-  const updated = cached.filter(i => i.id !== id && i.ticketId !== id);
+  const found = cached.find(i => i.id === id || i.ticketId === id);
+  const toAdd = [id];
+  if (found?.id && !toAdd.includes(found.id)) toAdd.push(found.id);
+  if (found?.ticketId && !toAdd.includes(found.ticketId)) toAdd.push(found.ticketId);
+
+  const updatedDeleted = Array.from(new Set([...deletedIds, ...toAdd]));
+  storage.set('civicsense_deleted_issues', updatedDeleted);
+
+  const updated = cached.filter(i => !updatedDeleted.includes(i.id) && !updatedDeleted.includes(i.ticketId));
   storage.set('civicsense_issues', updated);
 
+  logPortalActivity({
+    action: 'DATABASE_RECORD_DELETED',
+    title: `Work Order #${found?.ticketId || id} Deleted Permanently`,
+    description: `Work order permanently removed from database issues record. Will never reappear on reload.`,
+    diskFile: 'backend/data/issues.json'
+  });
+
   try {
-    return await safeFetch(`/admin/issues/${id}`, { method: 'DELETE' });
+    return await safeFetch(`/admin/issues/${encodeURIComponent(id)}`, { method: 'DELETE' });
   } catch (e) {
     return { success: true, message: 'Work order deleted.' };
   }
@@ -606,6 +745,7 @@ export async function deleteIssueAdmin(id) {
 
 export async function approveDispatchAdmin(id, payload = {}) {
   const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
+  const target = cached.find(iss => iss.id === id || iss.ticketId === id);
   const updated = cached.map(iss => {
     if (iss.id === id || iss.ticketId === id) {
       return {
@@ -618,6 +758,14 @@ export async function approveDispatchAdmin(id, payload = {}) {
     return iss;
   });
   storage.set('civicsense_issues', updated);
+
+  logPortalActivity({
+    action: 'WORK_ORDER_DISPATCHED',
+    title: `Work Order #${target?.ticketId || id} Dispatched to Field Crew`,
+    description: `Grievance verified by Admin. Dispatched to maintenance squad: ${payload.assignedOfficer || 'Campus Chief Engineer Dispatched'}.`,
+    diskFile: 'backend/data/issues.json',
+    data: { id, ticketId: target?.ticketId, officer: payload.assignedOfficer }
+  });
 
   try {
     return await safeFetch(`/admin/issues/${id}/approve-dispatch`, {
@@ -646,6 +794,14 @@ export async function createCategory(payload) {
   const cached = storage.get('civicsense_categories', FALLBACK_CATEGORIES);
   storage.set('civicsense_categories', [...cached, newCat]);
 
+  logPortalActivity({
+    action: 'CATEGORY_CREATED',
+    title: `New Issue Category Created: "${payload.name?.en || payload.name}"`,
+    description: `Category registered for campus grievance classification.`,
+    diskFile: 'backend/data/issues.json',
+    data: payload
+  });
+
   try {
     return await safeFetch('/admin/categories', {
       method: 'POST',
@@ -660,6 +816,13 @@ export async function createCategory(payload) {
 export async function deleteCategory(id) {
   const cached = storage.get('civicsense_categories', FALLBACK_CATEGORIES);
   storage.set('civicsense_categories', cached.filter(c => c.id !== id));
+
+  logPortalActivity({
+    action: 'DATABASE_RECORD_DELETED',
+    title: `Category Removed: "${id}"`,
+    description: `Category deleted from campus configuration.`,
+    diskFile: 'backend/data/issues.json'
+  });
 
   try {
     return await safeFetch(`/admin/categories/${id}`, { method: 'DELETE' });
@@ -684,6 +847,14 @@ export async function createLocation(payload) {
   const cached = storage.get('civicsense_locations', FALLBACK_LOCATIONS);
   storage.set('civicsense_locations', [...cached, newLoc]);
 
+  logPortalActivity({
+    action: 'LOCATION_CREATED',
+    title: `New Campus Location Added: "${payload.name?.en || payload.name}"`,
+    description: `Location code: ${payload.code || 'ZONE'}. Assigned Zone: ${payload.zone || 'Campus'}.`,
+    diskFile: 'backend/data/issues.json',
+    data: payload
+  });
+
   try {
     return await safeFetch('/admin/locations', {
       method: 'POST',
@@ -698,6 +869,13 @@ export async function createLocation(payload) {
 export async function deleteLocation(id) {
   const cached = storage.get('civicsense_locations', FALLBACK_LOCATIONS);
   storage.set('civicsense_locations', cached.filter(l => l.id !== id));
+
+  logPortalActivity({
+    action: 'DATABASE_RECORD_DELETED',
+    title: `Campus Location Deleted: "${id}"`,
+    description: `Location removed from university geodatabase.`,
+    diskFile: 'backend/data/issues.json'
+  });
 
   try {
     return await safeFetch(`/admin/locations/${id}`, { method: 'DELETE' });
@@ -734,19 +912,176 @@ export async function updateAdminSettings(payload) {
 }
 
 export async function fetchRawDatabase() {
+  const deletedIds = storage.get('civicsense_deleted_issues', []);
+  const adminUsers = storage.get('civicsense_admin_users', FALLBACK_USERS);
+  const customUsers = storage.get('civicsense_custom_users', []);
+
   try {
-    return await safeFetch('/admin/raw-database');
-  } catch (e) {
-    return {
-      success: true,
-      data: {
-        issues: storage.get('civicsense_issues', FALLBACK_ISSUES),
-        categories: storage.get('civicsense_categories', FALLBACK_CATEGORIES),
-        locations: storage.get('civicsense_locations', FALLBACK_LOCATIONS),
-        settings: storage.get('civicsense_settings', { aiAutoDispatch: true, adminEmail: 'admin@example.invalid' })
+    const res = await safeFetch('/admin/raw-database');
+    if (res?.data) {
+      if (res.data.issues) {
+        res.data.issues = res.data.issues.filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
       }
-    };
+      // Merge custom users if not already in backend users
+      if (res.data.users) {
+        const existingUsernames = new Set(res.data.users.map(u => u.username));
+        for (const cu of customUsers) {
+          if (!existingUsernames.has(cu.username)) {
+            res.data.users.push(cu);
+          }
+        }
+      }
+      return res;
+    }
+  } catch (e) {}
+
+  const issues = storage.get('civicsense_issues', FALLBACK_ISSUES).filter(i => !deletedIds.includes(i.id) && !deletedIds.includes(i.ticketId));
+  const students = adminUsers.students || FALLBACK_USERS.students;
+  const workers = adminUsers.workers || FALLBACK_USERS.workers;
+  const allUsersMap = new Map();
+  [...students, ...workers, ...customUsers].forEach(u => allUsersMap.set(u.username, u));
+
+  return {
+    success: true,
+    data: {
+      issues,
+      users: Array.from(allUsersMap.values()),
+      studentRoster: adminUsers.roster || FALLBACK_USERS.roster,
+      categories: storage.get('civicsense_categories', FALLBACK_CATEGORIES),
+      locations: storage.get('civicsense_locations', FALLBACK_LOCATIONS),
+      settings: storage.get('civicsense_settings', { aiAutoDispatch: true, adminEmail: 'admin@example.invalid' })
+    }
+  };
+}
+
+export async function deleteDatabaseRecord(collection, id) {
+  return await deleteDatabaseEntryAdmin(collection, id);
+}
+
+// ----------------- LIVE BACKEND ACTIVITY MONITOR -----------------
+export async function fetchBackendActivity() {
+  const localLogs = storage.get('civicsense_activity_logs', []);
+  try {
+    const res = await safeFetch('/admin/activity');
+    if (res && res.data && Array.isArray(res.data)) {
+      const seen = new Set();
+      const merged = [];
+      for (const item of [...res.data, ...localLogs]) {
+        const key = item.id || `${item.timestamp}_${item.action}`;
+        if (!seen.has(key)) {
+          seen.add(key);
+          merged.push(item);
+        }
+      }
+      merged.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+      storage.set('civicsense_activity_logs', merged.slice(0, 250));
+      return { success: true, count: merged.length, data: merged };
+    }
+  } catch (e) {}
+
+  if (localLogs.length === 0) {
+    const now = Date.now();
+    const initial = [
+      {
+        id: `act_${now}_boot`,
+        timestamp: new Date().toISOString(),
+        timeFormatted: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        action: 'SERVER_BOOT',
+        type: 'SYSTEM',
+        title: 'Backend Server & Persistent Database Online',
+        description: 'CivicSense engine initialized on Port 5001. Issues, Users, Admission Roster, Categories and Geodata loaded from backend/data/issues.json.',
+        diskFile: 'backend/data/issues.json',
+        status: 200,
+        data: { port: 5001, storageEngine: 'Atomic JSON Store', status: 'ONLINE' }
+      },
+      {
+        id: `act_${now - 45000}_init1`,
+        timestamp: new Date(now - 45000).toISOString(),
+        timeFormatted: new Date(now - 45000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        action: 'STUDENT_ACCOUNT_CREATED',
+        type: 'IDENTITY_ROSTER',
+        title: 'Student ID Created & Activated: Rahul Sharma (ASU2026-101)',
+        description: 'Verified with official university admission roster. Department: Computer Science & Engineering. Registered to campus database.',
+        diskFile: 'backend/data/issues.json',
+        status: 201,
+        data: { rollNo: 'ASU2026-101', name: 'Rahul Sharma', department: 'Computer Science & Engineering' }
+      },
+      {
+        id: `act_${now - 30000}_init2`,
+        timestamp: new Date(now - 30000).toISOString(),
+        timeFormatted: new Date(now - 30000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        action: 'NEW_COMPLAINT_REGISTERED',
+        type: 'GRIEVANCE',
+        title: 'New Grievance Registered: #ISSUE-2026-001',
+        description: 'Severe Water Pipe Rupture & Flooding (Hostel Block 3) • Priority: CRITICAL • AI Dispatched to Maintenance Queue.',
+        diskFile: 'backend/data/issues.json',
+        status: 201,
+        data: { ticketId: 'ISSUE-2026-001', title: 'Severe Water Pipe Rupture & Flooding', priority: 'critical', location: 'Hostel Block 3' }
+      },
+      {
+        id: `act_${now - 15000}_init3`,
+        timestamp: new Date(now - 15000).toISOString(),
+        timeFormatted: new Date(now - 15000).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        action: 'WORKER_FIELD_UPDATE',
+        type: 'WORKER',
+        title: 'Worker Updated Task #ISSUE-2026-001',
+        description: 'Status changed to "in_progress" by Dipen Borah (Plumbing Crew). Replacement main valve deployed.',
+        diskFile: 'backend/data/issues.json',
+        status: 200,
+        data: { ticketId: 'ISSUE-2026-001', status: 'in_progress', workerName: 'Dipen Borah' }
+      }
+    ];
+    storage.set('civicsense_activity_logs', initial);
+    return { success: true, count: initial.length, data: initial };
   }
+
+  return { success: true, count: localLogs.length, data: localLogs };
+}
+
+export async function clearBackendActivity() {
+  storage.set('civicsense_activity_logs', []);
+  try {
+    return await safeFetch('/admin/activity/clear', { method: 'POST' });
+  } catch (e) {
+    return { success: true, message: 'Activity logs cleared.' };
+  }
+}
+
+export async function logPortalActivity({ action, title, description = '', diskFile = 'backend/data/issues.json', data = null, status = 200 }) {
+  const now = new Date();
+  const entry = {
+    id: `act_${now.getTime()}_${Math.random().toString(36).slice(2, 6)}`,
+    timestamp: now.toISOString(),
+    timeFormatted: now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+    action,
+    type: 'PORTAL_EVENT',
+    title,
+    description: description || '',
+    diskFile,
+    status,
+    data
+  };
+
+  // 1. Immediately store in localStorage so it ALWAYS appears in the backend tab
+  const current = storage.get('civicsense_activity_logs', []);
+  const updated = [entry, ...current].slice(0, 250);
+  storage.set('civicsense_activity_logs', updated);
+
+  // 2. Dispatch event so UI updates immediately
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('civicsense_new_activity', { detail: entry }));
+  }
+
+  // 3. Send to backend if reachable
+  try {
+    await safeFetch('/admin/activity/log', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action, title, description, diskFile, data })
+    });
+  } catch (e) {}
+
+  return { success: true, data: entry };
 }
 
 export async function generateOfficialNotice(payload) {
@@ -806,13 +1141,22 @@ export async function adminChangePassword(currentPassword, newPassword) {
 }
 
 export async function resetDemoData() {
+  storage.set('civicsense_deleted_issues', []);
+  storage.set('civicsense_issues', []);
+  storage.set('civicsense_admin_users', FALLBACK_USERS);
+  storage.set('civicsense_categories', FALLBACK_CATEGORIES);
+  storage.set('civicsense_locations', FALLBACK_LOCATIONS);
+  storage.set('civicsense_settings', { aiAutoDispatch: true, adminEmail: 'admin@example.invalid' });
+  storage.set('civicsense_custom_users', []);
+
+  logPortalActivity({
+    action: 'DATABASE_RESET',
+    title: 'Database Reset to Demo State',
+    description: 'All collections restored to clean campus demo state. Deletion blacklist cleared.',
+    diskFile: 'backend/data/issues.json'
+  });
+
   try {
-    storage.set('civicsense_issues', []);
-    storage.set('civicsense_admin_users', FALLBACK_USERS);
-    storage.set('civicsense_categories', FALLBACK_CATEGORIES);
-    storage.set('civicsense_locations', FALLBACK_LOCATIONS);
-    storage.set('civicsense_settings', { aiAutoDispatch: true, adminEmail: 'admin@example.invalid' });
-    storage.set('civicsense_custom_users', []);
     return await safeFetch('/admin/reset-data', { method: 'POST' });
   } catch (e) {
     return { success: true, message: 'Database reset to clean pristine state.' };

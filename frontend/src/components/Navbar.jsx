@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useLanguage } from '../context/LanguageContext.jsx';
+import { logPortalActivity } from '../api.js';
 import { 
   ShieldAlert, Globe, Bell, UserCheck, ShieldCheck, 
   Wrench, GraduationCap, PhoneCall, Sparkles, LogIn, LogOut, Menu, X, Database 
@@ -8,6 +9,29 @@ import {
 export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab, setActiveTab }) {
   const { lang, toggleLanguage, t } = useLanguage();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  const handleLanguageToggle = () => {
+    const nextLang = lang === 'as' ? 'en' : 'as';
+    toggleLanguage();
+    logPortalActivity({
+      action: 'LANGUAGE_SWITCHED',
+      title: `Display Language Changed to ${nextLang === 'as' ? 'অসমীয়া (Assamese)' : 'English'}`,
+      description: `User toggled portal UI language preference in navigation bar.`,
+      diskFile: 'backend/data/activity_log.json',
+      data: { previous: lang, next: nextLang }
+    });
+  };
+
+  const handleSosClick = () => {
+    logPortalActivity({
+      action: 'SOS_EMERGENCY_TRIGGERED',
+      title: `🚨 Campus Emergency SOS Hotline Triggered`,
+      description: `User triggered emergency call dispatch to DU Campus Security (0373-2370231).`,
+      diskFile: 'backend/data/activity_log.json',
+      data: { hotline: '0373-2370231', service: 'Emergency Response' }
+    });
+    onOpenSos();
+  };
 
   const getRoleIcon = () => {
     switch (currentUser?.role) {
@@ -35,9 +59,11 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
             className="flex items-center space-x-3.5 cursor-pointer hover:opacity-95 transition-opacity pr-4" 
             onClick={() => setActiveTab(currentUser?.role === 'worker' ? 'worker' : 'report')}
           >
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-emerald-600 via-teal-500 to-indigo-600 flex items-center justify-center shadow-lg ring-2 ring-emerald-400/30 flex-shrink-0">
-              <span className="text-2xl">🏛️</span>
-            </div>
+            <img 
+              src="/civicsense-icon.png" 
+              alt="CivicSense Emblem" 
+              className="w-11 h-11 rounded-full object-contain drop-shadow-md flex-shrink-0" 
+            />
             <div>
               <div className="flex items-center space-x-2">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight bg-gradient-to-r from-white via-slate-100 to-emerald-300 bg-clip-text text-transparent">
@@ -106,7 +132,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
               {t('campusMapTab')}
             </button>
 
-            {/* Admin Dashboard Tab (Admin only) */}
+            {/* Admin Console & Backend Database Tabs (Strictly Admin only) */}
             {currentUser?.role === 'admin' && (
               <>
                 <button
@@ -125,12 +151,12 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                   onClick={() => setActiveTab('database')}
                   className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center space-x-1.5 ${
                     activeTab === 'database'
-                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30'
+                      ? 'bg-emerald-600 text-white shadow-md shadow-emerald-600/30 ring-2 ring-emerald-400/50'
                       : 'text-slate-300 hover:text-white hover:bg-slate-700/60'
                   }`}
                 >
-                  <Database className="w-4 h-4 text-emerald-400" />
-                  <span>{lang === 'as' ? 'প্ৰত্যক্ষ ডাটাবেচ' : 'Live Database'}</span>
+                  <Database className="w-4 h-4 text-emerald-400 animate-pulse" />
+                  <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & Database'}</span>
                 </button>
               </>
             )}
@@ -141,7 +167,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
             
             {/* Language Switcher */}
             <button
-              onClick={toggleLanguage}
+              onClick={handleLanguageToggle}
               title={lang === 'as' ? 'ভাষা সলনি কৰক' : 'Switch Language'}
               className="flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-800/90 hover:bg-slate-700 text-emerald-400 border border-slate-700 hover:border-emerald-500/50 transition-all shadow-sm cursor-pointer"
             >
@@ -151,7 +177,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
 
             {/* Emergency SOS Hotline */}
             <button
-              onClick={onOpenSos}
+              onClick={handleSosClick}
               className="hidden lg:flex items-center space-x-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-rose-600/90 hover:bg-rose-600 text-white border border-rose-500/80 shadow-md shadow-rose-600/20 animate-pulse cursor-pointer"
               title={lang === 'as' ? 'চৌহদ জৰুৰীকালীন হটলাইন' : 'Campus Emergency Hotline'}
             >
@@ -257,6 +283,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
               <span>🗺️</span>
             </button>
 
+            {/* Admin Console & Backend Database in Mobile Menu (Strictly Admin only) */}
             {currentUser?.role === 'admin' && (
               <>
                 <button
@@ -280,7 +307,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
                 >
                   <span className="flex items-center space-x-2">
                     <Database className="w-3.5 h-3.5 text-emerald-400" />
-                    <span>{lang === 'as' ? 'প্ৰত্যক্ষ ডাটাবেচ' : 'Live Database'}</span>
+                    <span>{lang === 'as' ? 'বেকএণ্ড আৰু ডাটাবেচ' : 'Backend & Database'}</span>
                   </span>
                   <span>🗄️</span>
                 </button>
@@ -290,7 +317,7 @@ export function Navbar({ currentUser, onOpenAuth, onLogout, onOpenSos, activeTab
 
           {/* Mobile SOS button */}
           <button
-            onClick={() => { onOpenSos(); setMobileMenuOpen(false); }}
+            onClick={() => { handleSosClick(); setMobileMenuOpen(false); }}
             className="w-full flex items-center justify-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shadow-md"
           >
             <PhoneCall className="w-3.5 h-3.5" />

@@ -3,7 +3,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { 
   X, MapPin, Clock, ThumbsUp, ShieldAlert, CheckCircle2, 
-  FileText, Sparkles, User, Calendar, ExternalLink, Star 
+  FileText, Sparkles, User, Calendar, ExternalLink, Star, Volume2, Mic 
 } from 'lucide-react';
 
 export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
@@ -170,6 +170,17 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
                   </div>
                 )}
               </div>
+            </div>
+          )}
+
+          {/* Audio Voice Note Player if attached */}
+          {issue.voiceNoteUrl && (
+            <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-500/50 text-white shadow-md">
+              <div className="flex items-center space-x-2 text-xs font-bold text-emerald-400 mb-2">
+                <Volume2 className="w-4 h-4 animate-pulse text-emerald-300" />
+                <span>{lang === 'as' ? 'সংযুক্ত মূল কণ্ঠস্বৰ অভিযোগ (Voice Note Audio Recording):' : 'Original Student Voice Note Audio Recording:'}</span>
+              </div>
+              <audio controls src={issue.voiceNoteUrl} className="w-full h-9 rounded-xl" />
             </div>
           )}
 

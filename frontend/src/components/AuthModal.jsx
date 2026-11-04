@@ -3,7 +3,8 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { loginUser, registerStudent, resetPasswordWithVerification } from '../api.js';
 import { 
   X, UserCheck, ShieldCheck, Wrench, GraduationCap, 
-  Key, Lock, Mail, Phone, CheckCircle2, AlertCircle, ArrowRight 
+  Key, Lock, Mail, Phone, CheckCircle2, AlertCircle, ArrowRight,
+  Eye, EyeOff
 } from 'lucide-react';
 
 export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
@@ -14,6 +15,11 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+
+  // Password visibility toggles ("see button")
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Login form state
   const [loginUsername, setLoginUsername] = useState('');
@@ -130,17 +136,26 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
           <X className="w-5 h-5" />
         </button>
 
-        {/* Modal Header */}
-        <div className="mb-5 text-center sm:text-left">
-          <div className="inline-flex items-center space-x-1.5 px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 mb-2">
-            <span>🏛️ Assam State University</span>
+        {/* Modal Header with CivicSense Brand Logo */}
+        <div className="mb-5 flex items-center space-x-3.5">
+          <img 
+            src="/civicsense-icon.png" 
+            alt="CivicSense Emblem" 
+            className="w-11 h-11 rounded-full object-contain drop-shadow-md flex-shrink-0" 
+          />
+          <div>
+            <div className="flex items-center space-x-2">
+              <h3 className="text-xl font-black text-slate-900 tracking-tight">
+                {lang === 'as' ? 'চিভিকচেন্স পৰ্টেল' : 'CivicSense'}
+              </h3>
+              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                {lang === 'as' ? 'সুৰক্ষিত প্ৰৱেশ' : 'Secure Login'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 mt-0.5 font-medium">
+              {lang === 'as' ? 'অসম ৰাজ্যিক বিশ্ববিদ্যালয় • চৌহদ প্ৰৱেশাধিকাৰ' : 'Assam State University • Campus Redressal Portal'}
+            </p>
           </div>
-          <h3 className="text-xl font-extrabold text-slate-900">
-            {lang === 'as' ? 'চৌহদ পৰ্টেলত প্ৰৱেশ কৰক' : 'CivicSense Portal Authentication'}
-          </h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            {lang === 'as' ? 'নিৰ্দিষ্ট ভূমিকা নিৰ্বাচন কৰি লগইন অথবা পঞ্জীয়ন কৰক' : 'Select your profile role to sign in or register.'}
-          </p>
         </div>
 
         {/* 3 Role Selection Pills */}
@@ -269,17 +284,52 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                {lang === 'as' ? 'গোপন পাছৱৰ্ড' : 'Password'}
-              </label>
-              <input
-                type="password"
-                required
-                value={loginPassword}
-                onChange={(e) => setLoginPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 font-medium"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-slate-700">
+                  {lang === 'as' ? 'গোপন পাছৱৰ্ড' : 'Password'}
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(prev => !prev)}
+                  className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center space-x-1 cursor-pointer select-none"
+                  tabIndex={-1}
+                >
+                  {showLoginPassword ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>{lang === 'as' ? 'লুকুৱাওক' : 'Hide'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{lang === 'as' ? 'পাছৱৰ্ড চাওক' : 'Show'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showLoginPassword ? 'text' : 'password'}
+                  required
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full pl-3.5 pr-11 py-2.5 rounded-xl border border-slate-300 focus:ring-2 focus:ring-emerald-500 font-medium text-slate-900"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowLoginPassword(prev => !prev)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 cursor-pointer"
+                  tabIndex={-1}
+                  title={showLoginPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showLoginPassword ? (
+                    <EyeOff className="w-4 h-4 text-emerald-600" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <button
@@ -341,17 +391,47 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
             </div>
 
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                {lang === 'as' ? 'একাউণ্টৰ পাছৱৰ্ড সৃষ্টি কৰক' : 'Create Account Password'} <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="password"
-                required
-                value={regPassword}
-                onChange={(e) => setRegPassword(e.target.value)}
-                placeholder={lang === 'as' ? 'সুৰক্ষিত পাছৱৰ্ড বাছনি কৰক' : 'Choose a secure password'}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-slate-700">
+                  {lang === 'as' ? 'একাউণ্টৰ পাছৱৰ্ড সৃষ্টি কৰক' : 'Create Account Password'} <span className="text-rose-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowRegPassword(prev => !prev)}
+                  className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center space-x-1 cursor-pointer select-none"
+                  tabIndex={-1}
+                >
+                  {showRegPassword ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>{lang === 'as' ? 'লুকুৱাওক' : 'Hide'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{lang === 'as' ? 'পাছৱৰ্ড চাওক' : 'Show'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showRegPassword ? 'text' : 'password'}
+                  required
+                  value={regPassword}
+                  onChange={(e) => setRegPassword(e.target.value)}
+                  placeholder={lang === 'as' ? 'সুৰক্ষিত পাছৱৰ্ড বাছনি কৰক' : 'Choose a secure password'}
+                  className="w-full pl-3 py-2 pr-10 rounded-xl border border-slate-300 font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowRegPassword(prev => !prev)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showRegPassword ? <EyeOff className="w-4 h-4 text-emerald-600" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -486,17 +566,47 @@ export function AuthModal({ isOpen, onClose, onLoginSuccess }) {
 
             {/* New Password */}
             <div>
-              <label className="block font-bold text-slate-700 mb-1">
-                {lang === 'as' ? 'নতুন পাছৱৰ্ড প্ৰৱিষ্ট কৰক' : 'Enter New Password'} <span className="text-rose-500">*</span>
-              </label>
-              <input
-                type="password"
-                required
-                value={newPassword}
-                onChange={(e) => setNewPassword(e.target.value)}
-                placeholder={lang === 'as' ? 'নূন্যতম ৪ টা আখৰ' : 'Minimum 4 characters'}
-                className="w-full px-3 py-2 rounded-xl border border-slate-300 font-medium"
-              />
+              <div className="flex items-center justify-between mb-1">
+                <label className="font-bold text-slate-700">
+                  {lang === 'as' ? 'নতুন পাছৱৰ্ড প্ৰৱিষ্ট কৰক' : 'Enter New Password'} <span className="text-rose-500">*</span>
+                </label>
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(prev => !prev)}
+                  className="text-[11px] text-emerald-600 hover:text-emerald-700 font-semibold flex items-center space-x-1 cursor-pointer select-none"
+                  tabIndex={-1}
+                >
+                  {showNewPassword ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5" />
+                      <span>{lang === 'as' ? 'লুকুৱাওক' : 'Hide'}</span>
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-3.5 h-3.5" />
+                      <span>{lang === 'as' ? 'পাছৱৰ্ড চাওক' : 'Show'}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  type={showNewPassword ? 'text' : 'password'}
+                  required
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder={lang === 'as' ? 'নূন্যতম ৪ টা আখৰ' : 'Minimum 4 characters'}
+                  className="w-full pl-3 py-2 pr-10 rounded-xl border border-slate-300 font-medium"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowNewPassword(prev => !prev)}
+                  className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-700 cursor-pointer"
+                  tabIndex={-1}
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4 text-emerald-600" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
             </div>
 
             <button

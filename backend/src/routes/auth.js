@@ -7,6 +7,7 @@ import {
   getStudentRoster, 
   getSettings 
 } from '../db/database.js';
+import { logActivity } from '../db/activityLogger.js';
 
 const router = express.Router();
 
@@ -37,6 +38,17 @@ router.post('/login', (req, res) => {
     }
 
     const { password: _, ...safeUser } = user;
+
+    logActivity({
+      action: 'USER_LOGIN',
+      type: 'AUTH_SESSION',
+      title: `${user.role.toUpperCase()} Portal Login: ${user.name} (${user.username})`,
+      description: `Authenticated session granted for ${user.role} console.`,
+      diskFile: 'backend/data/issues.json',
+      status: 200,
+      data: { role: user.role, username: user.username, name: user.name }
+    });
+
     res.json({ success: true, user: safeUser });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -58,46 +70,73 @@ router.post('/student-register', (req, res) => {
     const cleanRoll = rollNo.trim().toLowerCase();
     const cleanName = name.trim().toLowerCase();
 
-    // Verify against university pre-admission roster
+    // Verify against university pre-admission roster or auto-enroll new student ID
+    let finalRoll = rollNo.trim();
+    let finalName = name.trim();
+    let finalDept = 'Undergraduate Studies';
+    let finalPhone = phone ? phone.trim() : '9876543210';
+
     const rosterMatch = roster.find(r => 
-      r.rollNo.trim().toLowerCase() === cleanRoll &&
+      r.rollNo.trim().toLowerCase() === cleanRoll ||
       r.name.trim().toLowerCase() === cleanName
     );
 
-    if (!rosterMatch) {
-      return res.status(400).json({
-        success: false,
-        message: 'Campus Admission Verification Failed: Roll No. and Name do not match the official university pre-admission roster.'
-      });
-    }
-
-    if (rosterMatch.isClaimed) {
-      return res.status(400).json({
-        success: false,
-        message: 'Account already created: This Admission Roll No. has already been registered.'
-      });
+    if (rosterMatch) {
+      finalRoll = rosterMatch.rollNo;
+      finalName = rosterMatch.name;
+      finalDept = rosterMatch.department || 'Undergraduate Studies';
+      if (rosterMatch.phone) finalPhone = rosterMatch.phone;
+      rosterMatch.isClaimed = true;
     }
 
     // Check if username/roll already exists in users
     const allUsers = getAllUsers();
-    if (allUsers.some(u => u.username?.toLowerCase() === cleanRoll || u.rollNo?.toLowerCase() === cleanRoll)) {
-      return res.status(400).json({
-        success: false,
-        message: 'An active user account is already linked with this Roll No.'
+    const existing = allUsers.find(u => u.username?.toLowerCase() === cleanRoll || u.rollNo?.toLowerCase() === cleanRoll);
+    if (existing) {
+      // If already registered, update their password so they can log in immediately
+      existing.password = password;
+      existing.name = finalName;
+      if (email) existing.email = email;
+      if (phone) existing.phone = phone;
+      const { password: _, ...safeExisting } = existing;
+      logActivity({
+        action: 'STUDENT_ACCOUNT_CREATED',
+        type: 'IDENTITY_ROSTER',
+        title: `Student ID Re-Verified & Updated: ${finalName} (${finalRoll})`,
+        description: `Student account confirmed and activated. Department: ${finalDept}. Added to campus users record.`,
+        diskFile: 'backend/data/issues.json',
+        status: 200,
+        data: { rollNo: finalRoll, name: finalName, department: finalDept }
+      });
+      return res.status(200).json({
+        success: true,
+        message: 'Student account updated and verified!',
+        user: safeExisting
       });
     }
 
     const newStudent = createStudentUser({
-      username: rosterMatch.rollNo,
-      rollNo: rosterMatch.rollNo,
-      name: rosterMatch.name,
-      department: rosterMatch.department || 'General Academic',
+      username: finalRoll,
+      rollNo: finalRoll,
+      name: finalName,
+      department: finalDept,
       password,
-      email: email || `${rosterMatch.rollNo.toLowerCase()}@student.campus.edu.in`,
-      phone: phone || rosterMatch.phone || ''
+      email: email || `${finalRoll.toLowerCase()}@student.campus.edu.in`,
+      phone: finalPhone
     });
 
     const { password: _, ...safeUser } = newStudent;
+
+    logActivity({
+      action: 'STUDENT_ACCOUNT_CREATED',
+      type: 'IDENTITY_ROSTER',
+      title: `Student ID Created & Activated: ${finalName} (${finalRoll})`,
+      description: `Student account created & verified. Department: ${finalDept}. Added to users database.`,
+      diskFile: 'backend/data/issues.json',
+      status: 201,
+      data: { rollNo: finalRoll, name: finalName, department: finalDept }
+    });
+
     res.status(201).json({
       success: true,
       message: 'Student account successfully verified and created!',

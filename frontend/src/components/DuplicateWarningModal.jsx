@@ -71,9 +71,9 @@ export function DuplicateWarningModal({ isOpen, onClose, duplicate, onUpvoteExis
         <div className="flex flex-col sm:flex-row gap-2.5">
           <button
             onClick={() => onUpvoteExisting(duplicate.id || duplicate.ticketId)}
-            className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white flex items-center justify-center space-x-2 shadow-lg shadow-emerald-900/30 transition-all"
+            className="flex-1 px-4 py-2.5 rounded-xl text-xs font-bold bg-blue-600 hover:bg-blue-500 text-white flex items-center justify-center space-x-2 shadow-lg shadow-blue-900/40 transition-all active:scale-95 cursor-pointer"
           >
-            <ThumbsUp className="w-4 h-4" />
+            <ThumbsUp className="w-4 h-4 fill-white" />
             <span>{t('upvoteInsteadBtn')}</span>
           </button>
           

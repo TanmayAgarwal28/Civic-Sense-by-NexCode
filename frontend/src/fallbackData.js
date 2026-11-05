@@ -25,6 +25,7 @@ export const FALLBACK_ISSUES = [
     assignedWorkerId: 'usr_wrk_02',
     assignedWorkerName: 'Demo Plumber (WRK-PLUMB01)',
     upvotes: 6,
+    upvotedBy: [],
     language: 'en',
     originalLanguage: 'en',
     createdAt: '2026-11-03T13:45:00.000Z'
@@ -55,6 +56,7 @@ export const FALLBACK_ISSUES = [
     assignedWorkerId: 'usr_wrk_01',
     assignedWorkerName: 'Demo Electrician (WRK-ELEC01)',
     upvotes: 9,
+    upvotedBy: [],
     language: 'as',
     originalLanguage: 'as',
     createdAt: '2026-11-03T14:15:00.000Z'
@@ -85,6 +87,7 @@ export const FALLBACK_ISSUES = [
     assignedWorkerId: 'usr_wrk_03',
     assignedWorkerName: 'Demo Network Technician (WRK-NET01)',
     upvotes: 4,
+    upvotedBy: [],
     language: 'en',
     originalLanguage: 'en',
     createdAt: '2026-11-03T12:00:00.000Z'
@@ -113,6 +116,7 @@ export const FALLBACK_ISSUES = [
     reporterName: 'Demo Student Four',
     reporterRoll: 'ASU2026-104',
     upvotes: 3,
+    upvotedBy: [],
     language: 'as',
     originalLanguage: 'as',
     createdAt: '2026-11-03T13:00:00.000Z'
@@ -145,6 +149,7 @@ export const FALLBACK_ISSUES = [
     assignedWorkerId: 'usr_wrk_02',
     assignedWorkerName: 'Demo Plumber (WRK-PLUMB01)',
     upvotes: 5,
+    upvotedBy: [],
     language: 'en',
     originalLanguage: 'en',
     createdAt: '2026-11-03T08:00:00.000Z'

@@ -242,25 +242,36 @@ router.post('/', upload.fields([{ name: 'image', maxCount: 1 }, { name: 'voiceNo
   }
 });
 
-// POST upvote issue
+// POST upvote issue (Enforces strict 1 like per person)
 router.post('/:id/upvote', (req, res) => {
   try {
-    const updated = upvoteIssue(req.params.id);
+    const userId = req.body?.userId || req.user?.id || req.headers['x-user-id'] || 'usr_stu_01';
+    const updated = upvoteIssue(req.params.id, userId);
     if (!updated) {
       return res.status(404).json({ success: false, message: 'Issue not found' });
+    }
+
+    if (updated.alreadyLiked) {
+      return res.json({
+        success: true,
+        alreadyLiked: true,
+        data: updated,
+        isLiked: true,
+        message: 'You have already liked this grievance. Only 1 like per person is allowed.'
+      });
     }
 
     logActivity({
       action: 'STUDENT_UPVOTE',
       type: 'PORTAL_EVENT',
       title: `Student Upvoted Grievance ${updated.ticketId}`,
-      description: `Community endorsement increased to ${updated.upvotes} upvotes.`,
+      description: `Community endorsement now at ${updated.upvotes} upvotes (User: ${userId}, 1-like-per-person limit enforced).`,
       diskFile: 'backend/data/issues.json',
       status: 200,
-      data: { ticketId: updated.ticketId, upvotes: updated.upvotes }
+      data: { ticketId: updated.ticketId, upvotes: updated.upvotes, userId, isLiked: true }
     });
 
-    res.json({ success: true, data: updated });
+    res.json({ success: true, alreadyLiked: false, data: updated, isLiked: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

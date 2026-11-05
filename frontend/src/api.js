@@ -363,33 +363,98 @@ export async function submitIssue(formData) {
   return { success: true, message: 'Grievance registered and dispatched.', data: created };
 }
 
-export async function upvoteIssue(id) {
-  let updatedCount = 1;
+export async function upvoteIssue(id, userId) {
+  const savedUser = storage.get('civicsense_current_user', null);
+  const currentUserId = userId || savedUser?.id || savedUser?.username || 'usr_stu_01';
+  const likesKey = `civicsense_user_likes_${currentUserId}`;
+  const currentLikes = storage.get(likesKey, []);
+  const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
+  const foundIssue = cached.find(iss => iss.id === id || iss.ticketId === id);
+
+  // Strictly enforce 1 like per person: verify if current user has already liked this issue
+  const alreadyLiked = currentLikes.includes(id) ||
+    (foundIssue?.ticketId && currentLikes.includes(foundIssue.ticketId)) ||
+    (Array.isArray(foundIssue?.upvotedBy) && foundIssue.upvotedBy.includes(currentUserId));
+
+  if (alreadyLiked) {
+    return {
+      success: false,
+      alreadyLiked: true,
+      data: {
+        id,
+        upvotes: foundIssue?.upvotes || 0,
+        isLiked: true,
+        upvotedBy: foundIssue?.upvotedBy || [currentUserId]
+      },
+      message: 'You have already liked this issue. Only 1 like per student is permitted.'
+    };
+  }
+
+  let updatedCount = (foundIssue?.upvotes || 0) + 1;
+  let updatedUpvotedBy = foundIssue?.upvotedBy ? [...foundIssue.upvotedBy, currentUserId] : [currentUserId];
+
   try {
-    const res = await safeFetch(`/issues/${id}/upvote`, { method: 'POST' });
-    if (res?.data?.upvotes) updatedCount = res.data.upvotes;
+    const res = await safeFetch(`/issues/${id}/upvote`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ userId: currentUserId })
+    });
+    if (res?.data?.upvotes !== undefined) {
+      updatedCount = res.data.upvotes;
+      if (res.data.upvotedBy) updatedUpvotedBy = res.data.upvotedBy;
+    }
+    if (res?.alreadyLiked) {
+      return {
+        success: false,
+        alreadyLiked: true,
+        data: res.data,
+        message: 'You have already liked this issue. Only 1 like per student is permitted.'
+      };
+    }
   } catch (e) {
-    const cached = storage.get('civicsense_issues', FALLBACK_ISSUES);
+    // Client-side fallback: record single like and persist
     const updated = cached.map(iss => {
       if (iss.id === id || iss.ticketId === id) {
-        return { ...iss, upvotes: (iss.upvotes || 0) + 1 };
+        const upvotedBy = Array.isArray(iss.upvotedBy) ? [...iss.upvotedBy] : [];
+        if (!upvotedBy.includes(currentUserId)) {
+          upvotedBy.push(currentUserId);
+        }
+        const count = (iss.upvotes || 0) + 1;
+        updatedCount = count;
+        updatedUpvotedBy = upvotedBy;
+        return { ...iss, upvotes: count, upvotedBy };
       }
       return iss;
     });
     storage.set('civicsense_issues', updated);
-    const found = updated.find(i => i.id === id || i.ticketId === id);
-    updatedCount = found?.upvotes || 1;
   }
+
+  // Record user like in localStorage set
+  try {
+    const userLikes = new Set(storage.get(likesKey, []));
+    userLikes.add(id);
+    if (foundIssue?.ticketId) userLikes.add(foundIssue.ticketId);
+    storage.set(likesKey, Array.from(userLikes));
+  } catch (err) {}
 
   logPortalActivity({
     action: 'STUDENT_UPVOTE',
     title: `Student Upvoted Issue #${id}`,
-    description: `Endorsement recorded (Total: ${updatedCount} upvotes).`,
+    description: `Endorsement recorded (Total: ${updatedCount} upvotes). Strict 1-like-per-person limit enforced.`,
     diskFile: 'backend/data/issues.json',
-    data: { id, upvotes: updatedCount }
+    data: { id, upvotes: updatedCount, isLiked: true, userId: currentUserId }
   });
 
-  return { success: true, data: { id, upvotes: updatedCount } };
+  return {
+    success: true,
+    alreadyLiked: false,
+    data: {
+      id,
+      upvotes: updatedCount,
+      isLiked: true,
+      upvotedBy: updatedUpvotedBy
+    }
+  };
 }
 
 export async function updateIssueStatus(id, formData) {

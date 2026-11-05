@@ -156,13 +156,67 @@ export default function App() {
   };
 
   const handleUpvote = async (issueId) => {
+    const currentUserId = currentUser?.id || currentUser?.username || 'usr_stu_01';
+
+    // Check if already liked in state or localStorage to immediately notify user and prevent multiple clicks
+    const likesKey = `civicsense_user_likes_${currentUserId}`;
+    let isAlreadyLiked = false;
     try {
-      const res = await upvoteIssue(issueId);
+      const userLikes = JSON.parse(localStorage.getItem(likesKey) || '[]');
+      if (userLikes.includes(issueId)) isAlreadyLiked = true;
+    } catch (e) {}
+
+    const targetIssue = issues.find(i => i.id === issueId || i.ticketId === issueId);
+    if (targetIssue?.ticketId) {
+      try {
+        const userLikes = JSON.parse(localStorage.getItem(likesKey) || '[]');
+        if (userLikes.includes(targetIssue.ticketId)) isAlreadyLiked = true;
+      } catch (e) {}
+    }
+    if (Array.isArray(targetIssue?.upvotedBy) && targetIssue.upvotedBy.includes(currentUserId)) {
+      isAlreadyLiked = true;
+    }
+
+    if (isAlreadyLiked) {
+      showToast(lang === 'as' ? '⚠️ আপুনি ইতিমধ্যে এই অভিযোগত সন্মতি জনাইছে! (প্ৰতিজন ব্যক্তিৰ বাবে কেৱল ১টা লাইক)' : '⚠️ You have already liked this issue! Only 1 like per person is allowed.');
+      return;
+    }
+
+    try {
+      const res = await upvoteIssue(issueId, currentUserId);
+      if (res.alreadyLiked) {
+        showToast(lang === 'as' ? '⚠️ আপুনি ইতিমধ্যে এই অভিযোগত সন্মতি জনাইছে! (প্ৰতিজন ব্যক্তিৰ বাবে কেৱল ১টা লাইক)' : '⚠️ You have already liked this issue! Only 1 like per person is allowed.');
+        return;
+      }
+
       if (res.success) {
-        setIssues(prev => prev.map(i => i.id === issueId ? { ...i, upvotes: res.data.upvotes } : i));
-        if (selectedIssue && selectedIssue.id === issueId) {
-          setSelectedIssue(prev => ({ ...prev, upvotes: res.data.upvotes }));
+        const { upvotes, upvotedBy } = res.data;
+        setIssues(prev => prev.map(i => {
+          if (i.id === issueId || i.ticketId === issueId) {
+            const currentUpvotedBy = Array.isArray(upvotedBy) ? upvotedBy : (Array.isArray(i.upvotedBy) ? [...i.upvotedBy, currentUserId] : [currentUserId]);
+            return { ...i, upvotes, upvotedBy: currentUpvotedBy, isLiked: true };
+          }
+          return i;
+        }));
+
+        if (selectedIssue && (selectedIssue.id === issueId || selectedIssue.ticketId === issueId)) {
+          setSelectedIssue(prev => {
+            const currentUpvotedBy = Array.isArray(upvotedBy) ? upvotedBy : (Array.isArray(prev.upvotedBy) ? [...prev.upvotedBy, currentUserId] : [currentUserId]);
+            return { ...prev, upvotes, upvotedBy: currentUpvotedBy, isLiked: true };
+          });
         }
+
+        // Celebratory blue confetti micro-burst
+        try {
+          confetti({
+            particleCount: 30,
+            spread: 50,
+            origin: { y: 0.8 },
+            colors: ['#2563eb', '#3b82f6', '#60a5fa', '#38bdf8']
+          });
+        } catch (e) {}
+
+        showToast(lang === 'as' ? '👍 আপোনাৰ সন্মতি যোগ কৰা হ’ল! (প্ৰতিজন ব্যক্তিৰ বাবে ১টা লাইক)' : '👍 Liked! (1 like per student recorded)');
       }
     } catch (err) {
       console.error('Error upvoting:', err);
@@ -266,6 +320,7 @@ export default function App() {
               }}
               onUpvoteIssue={handleUpvote}
               onRefresh={loadData}
+              currentUser={currentUser}
             />
           </div>
         )}
@@ -420,6 +475,7 @@ export default function App() {
         onClose={() => setDetailModalOpen(false)}
         issue={selectedIssue}
         onUpvote={handleUpvote}
+        currentUser={currentUser}
       />
 
       <DuplicateWarningModal

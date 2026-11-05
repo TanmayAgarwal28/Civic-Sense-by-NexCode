@@ -3,7 +3,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { IssueCard } from './IssueCard.jsx';
 import { Search, Filter, SlidersHorizontal, AlertCircle, Sparkles } from 'lucide-react';
 
-export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh }) {
+export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh, currentUser }) {
   const { lang, t } = useLanguage();
 
   const [searchTerm, setSearchTerm] = useState('');
@@ -227,6 +227,7 @@ export function IssueList({ issues = [], onSelectIssue, onUpvoteIssue, onRefresh
               issue={issue}
               onSelect={onSelectIssue}
               onUpvote={onUpvoteIssue}
+              currentUserId={currentUser?.id || currentUser?.username}
             />
           ))}
         </div>

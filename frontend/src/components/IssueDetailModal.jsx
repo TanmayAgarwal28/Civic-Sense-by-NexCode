@@ -6,7 +6,7 @@ import {
   FileText, Sparkles, User, Calendar, ExternalLink, Star, Volume2, Mic 
 } from 'lucide-react';
 
-export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
+export function IssueDetailModal({ isOpen, onClose, issue, onUpvote, currentUser }) {
   const { lang, t } = useLanguage();
   const [rating, setRating] = useState(issue?.rating || 0);
   const [hasRated, setHasRated] = useState(false);
@@ -20,6 +20,28 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
 
   const bi = getIssueBilingual(issue);
   const isResolved = issue.status === 'resolved' || issue.status === 'closed';
+
+  const activeUserId = currentUser?.id || currentUser?.username || (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('civicsense_current_user'));
+      return u?.id || u?.username || 'usr_stu_01';
+    } catch (e) {
+      return 'usr_stu_01';
+    }
+  })();
+
+  const isLiked = Boolean(
+    issue.isLiked ||
+    (Array.isArray(issue.upvotedBy) && issue.upvotedBy.includes(activeUserId)) ||
+    (() => {
+      try {
+        const likes = JSON.parse(localStorage.getItem(`civicsense_user_likes_${activeUserId}`) || '[]');
+        return likes.includes(issue.id) || likes.includes(issue.ticketId);
+      } catch (e) {
+        return false;
+      }
+    })()
+  );
 
   const displayTitle = lang === 'as' ? bi.titleAs : bi.titleEn;
   const displayDescription = lang === 'as' ? bi.descriptionAs : bi.descriptionEn;
@@ -327,16 +349,34 @@ export function IssueDetailModal({ isOpen, onClose, issue, onUpvote }) {
         {/* Modal Bottom Actions */}
         <div className="p-4 bg-slate-100 rounded-b-3xl border-t border-slate-200 flex items-center justify-between">
           <button
-            onClick={() => onUpvote(issue.id)}
-            className="flex items-center space-x-1.5 px-4 py-2 rounded-xl text-xs font-bold bg-white hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-300 transition-all shadow-sm"
+            disabled={isLiked}
+            onClick={() => {
+              if (isLiked) return;
+              onUpvote(issue.id);
+            }}
+            className={`flex items-center space-x-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 shadow-sm ${
+              isLiked
+                ? 'bg-blue-600 text-white border border-blue-500 shadow-blue-500/30 ring-2 ring-blue-400/40 cursor-default opacity-100 animate-likeBounce'
+                : 'bg-white hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-300 hover:border-blue-300 active:scale-95 cursor-pointer hover:scale-105'
+            }`}
+            title={
+              isLiked
+                ? (lang === 'as' ? 'আপুনি ইতিমধ্যে সন্মতি জনাইছে (প্ৰতিজনৰ বাবে কেৱল ১টা লাইক অনুমোদিত)' : 'Liked! (Only 1 like allowed per person)')
+                : (lang === 'as' ? 'সন্মতি জনাওক (+১, প্ৰতিজনৰ বাবে ১টা লাইক)' : 'Upvote (+1, 1 like per student)')
+            }
           >
-            <ThumbsUp className="w-4 h-4 text-emerald-600" />
-            <span>{t('upvoteBtn')} ({issue.upvotes || 0})</span>
+            <ThumbsUp className={`w-4 h-4 transition-transform duration-200 ${isLiked ? 'text-white fill-white' : 'text-blue-600'}`} />
+            <span>
+              {isLiked
+                ? (lang === 'as' ? `✓ সন্মতি জনোৱা হৈছে (${issue.upvotes || 0})` : `✓ Liked (${issue.upvotes || 0})`)
+                : `${t('upvoteBtn')} (${issue.upvotes || 0})`
+              }
+            </span>
           </button>
 
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-sm"
+            className="px-5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white transition-all shadow-sm active:scale-95 cursor-pointer"
           >
             {t('closeBtn')}
           </button>

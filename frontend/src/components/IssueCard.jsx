@@ -3,7 +3,7 @@ import { useLanguage } from '../context/LanguageContext.jsx';
 import { getIssueBilingual } from '../utils/bilingualTranslator.js';
 import { MapPin, Clock, ThumbsUp, ChevronRight, ShieldAlert, CheckCircle2, Sparkles, AlertCircle, Link2, Mic } from 'lucide-react';
 
-export function IssueCard({ issue, onSelect, onUpvote }) {
+export function IssueCard({ issue, onSelect, onUpvote, currentUserId }) {
   const { lang, t } = useLanguage();
   const bi = getIssueBilingual(issue);
 
@@ -11,6 +11,28 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
   const isHigh = issue.priority === 'high';
   const isResolved = issue.status === 'resolved' || issue.status === 'closed';
   const hasVoiceNote = Boolean(issue.voiceNoteUrl || issue.voiceUrl || issue.audioBlobUrl);
+
+  const activeUserId = currentUserId || (() => {
+    try {
+      const u = JSON.parse(localStorage.getItem('civicsense_current_user'));
+      return u?.id || u?.username || 'usr_stu_01';
+    } catch (e) {
+      return 'usr_stu_01';
+    }
+  })();
+
+  const isLiked = Boolean(
+    issue.isLiked ||
+    (Array.isArray(issue.upvotedBy) && issue.upvotedBy.includes(activeUserId)) ||
+    (() => {
+      try {
+        const likes = JSON.parse(localStorage.getItem(`civicsense_user_likes_${activeUserId}`) || '[]');
+        return likes.includes(issue.id) || likes.includes(issue.ticketId);
+      } catch (e) {
+        return false;
+      }
+    })()
+  );
 
   const getPriorityBadgeClass = () => {
     switch (issue.priority) {
@@ -47,7 +69,7 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
   return (
     <div
       onClick={() => onSelect(issue)}
-      className={`bg-white rounded-2xl border p-4 sm:p-5 shadow-sm card-hover cursor-pointer flex flex-col justify-between group ${
+      className={`bg-white rounded-2xl border p-4 sm:p-5 shadow-sm card-hover cursor-pointer flex flex-col justify-between group animate-cardSlideIn ${
         isCritical
           ? 'border-rose-300 hover:border-rose-500 ring-1 ring-rose-200'
           : 'border-slate-200 hover:border-emerald-500'
@@ -155,22 +177,43 @@ export function IssueCard({ issue, onSelect, onUpvote }) {
         </div>
 
         <div className="flex items-center space-x-2">
-          {/* Upvote Button */}
+          {/* Upvote / Like Button (Turns Blue, strictly 1 like per student limit) */}
           <button
             type="button"
+            disabled={isLiked}
             onClick={(e) => {
               e.stopPropagation();
+              if (isLiked) return;
               onUpvote(issue.id);
             }}
-            className="flex items-center space-x-1 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-emerald-50 text-slate-700 hover:text-emerald-700 border border-slate-200 transition-all font-bold cursor-pointer active:scale-90 shadow-sm"
-            title={lang === 'as' ? 'সন্মতি জনাওক (+১)' : 'Upvote (+1)'}
+            className={`group/like flex items-center space-x-1.5 px-3 py-1.5 rounded-xl font-bold transition-all duration-200 shadow-sm ${
+              isLiked
+                ? 'bg-blue-600 text-white border border-blue-500 shadow-blue-500/30 ring-2 ring-blue-400/40 cursor-default opacity-100 animate-likeBounce'
+                : 'bg-slate-100 hover:bg-blue-50 text-slate-700 hover:text-blue-600 border border-slate-200 hover:border-blue-200 hover:shadow-xs cursor-pointer active:scale-90 hover:scale-105'
+            }`}
+            title={
+              isLiked
+                ? (lang === 'as' ? 'আপুনি ইতিমধ্যে সন্মতি জনাইছে (প্ৰতিজনৰ বাবে কেৱল ১টা লাইক অনুমোদিত)' : 'Liked! (Only 1 like allowed per person)')
+                : (lang === 'as' ? 'সন্মতি জনাওক (+১, প্ৰতিজনৰ বাবে ১টা লাইক)' : 'Upvote (+1, 1 like per student)')
+            }
           >
-            <ThumbsUp className="w-3.5 h-3.5 text-slate-500 hover:text-emerald-600" />
-            <span className="font-mono">{issue.upvotes || 0}</span>
+            <ThumbsUp
+              className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                isLiked ? 'text-white fill-white scale-110' : 'text-slate-500 group-hover/like:scale-115 group-hover/like:text-blue-600'
+              }`}
+            />
+            <span className={`font-mono text-xs ${isLiked ? 'text-white font-black' : ''}`}>
+              {issue.upvotes || 0}
+            </span>
+            {isLiked && (
+              <span className="text-[10px] bg-blue-700/90 px-1 py-0.2 rounded text-blue-100 font-bold ml-0.5">
+                ✓
+              </span>
+            )}
           </button>
 
           {/* View Details Arrow */}
-          <span className="p-1 rounded-lg text-emerald-600 hover:bg-emerald-50 group-hover:translate-x-0.5 transition-transform">
+          <span className="p-1 rounded-lg text-emerald-600 hover:bg-emerald-50 group-hover:translate-x-1 transition-transform duration-200">
             <ChevronRight className="w-4 h-4" />
           </span>
         </div>

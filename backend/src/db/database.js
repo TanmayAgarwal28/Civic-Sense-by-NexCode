@@ -97,6 +97,7 @@ export function createIssue(issueData) {
     id: `iss_${Date.now()}_${uuidv4().slice(0, 6)}`,
     ticketId,
     upvotes: 0,
+    upvotedBy: [],
     status: 'reported',
     createdAt: new Date().toISOString(),
     timeline: [
@@ -161,14 +162,29 @@ export function deleteIssue(id) {
   return store.issues.length < initialLen;
 }
 
-export function upvoteIssue(id) {
+export function upvoteIssue(id, userId = 'usr_stu_01') {
   const store = readDatabase();
   const item = store.issues.find(i => i.id === id || i.ticketId === id);
   if (!item) return null;
 
+  if (!Array.isArray(item.upvotedBy)) {
+    item.upvotedBy = [];
+  }
+
+  const uid = String(userId || 'usr_stu_01');
+  const index = item.upvotedBy.indexOf(uid);
+
+  if (index >= 0) {
+    // Strictly 1 like per person: already liked, do not increment or allow multiple clicks
+    return { ...item, isLiked: true, alreadyLiked: true };
+  }
+
+  // Record 1 like for this user
+  item.upvotedBy.push(uid);
   item.upvotes = (item.upvotes || 0) + 1;
+
   saveDatabase(store);
-  return item;
+  return { ...item, isLiked: true, alreadyLiked: false };
 }
 
 // ----------------- USERS -----------------
